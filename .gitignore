@@ -67,3 +67,14 @@ coverage.xml
 *.bak
 *~
 *.swp
+
+# Project specific
+data/
+migrations/
+*.db.backup
+error.log
+drop_tables.py
+
+# Test files
+test_*.py
+test_*.db
