@@ -1,0 +1,46 @@
+.device-item {
+    transition: all 0.3s ease;
+}
+
+.device-item:hover {
+    transform: translateY(-2px);
+}
+
+.logs-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.logs-content {
+    white-space: pre-wrap;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.btn-group {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.device-status {
+    font-size: 0.9rem;
+}
+
+.device-status.connected {
+    background-color: #28a745;
+}
+
+.device-status.disconnected {
+    background-color: #dc3545;
+}
+
+.device-info {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+}
+
+.progress {
+    height: 0.8rem;
+} 

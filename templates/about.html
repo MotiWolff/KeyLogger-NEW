@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}KeyLogger - About{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+    <div class="px-4 pt-5 my-5 text-center border-bottom">
+        <h1 class="display-4 fw-bold text-body-emphasis">About KeyLogger</h1>
+        <div class="col-lg-6 mx-auto">
+          <p class="lead mb-4">KeyLogger is a tool that allows you to monitor the activity of your computer. It is a simple and easy to use tool that is designed to be used by anyone.</p>
+          <p class="lead mb-4">At KodCode, we have been instructed to develop a KeyLogger that is able to monitor the activity of the computer and send the data to a server and display it on a website.</p>
+          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mb-5">
+            <a href="https://drive.google.com/file/d/1NRq6g9Hd74KWGZDZkRS3gW0bNLL1UfQZ/view?usp=drive_link" type="button" class="btn btn-warning btn-lg px-4 me-sm-3" >KodCode Guidlines</a>
+          </div>
+        </div>
+        <div class="overflow-hidden" style="max-height: 30vh;">
+          <div class="container px-5">
+            <img src="{{ url_for('static', filename='/images/logging.png') }}" class="img-fluid border rounded-3 shadow-lg mb-4" alt="Example image" width="700" height="500" loading="lazy">
+          </div>
+        </div>
+      </div>
+</div>
+
+<div class="container">
+    <div class="container px-4 py-5" id="icon-grid">
+        <h2 class="pb-2 border-bottom">Why are we unique?</h2>
+    
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4 py-5">
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-apple text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">macOS Support</h3>
+                    <p>We support macOS, even though it requires a lot of work to get it to work.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-award-fill text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Top-Notch Design</h3>
+                    <p>We have a top-notch design that is easy to use and understand.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-clock-history text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Time Tracking</h3>
+                    <p>Accurate time management and activity monitoring for project tracking.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-gear text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Customizable</h3>
+                    <p>Flexible configuration options to match your organization's monitoring needs.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-lightning text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Fast Performance</h3>
+                    <p>Optimized for minimal system impact while maintaining detailed logging.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-cloud-upload text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Cloud Sync</h3>
+                    <p>Automatic synchronization of logs with secure cloud storage.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-bell text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Alert System</h3>
+                    <p>Real-time notifications for important system events and activities.</p>
+                </div>
+            </div>
+            <div class="col d-flex align-items-start">
+                <i class="bi bi-tools text-warning flex-shrink-0 me-3" style="font-size: 1.75rem;"></i>
+                <div>
+                    <h3 class="fw-bold mb-0 fs-4 text-body-emphasis">Easy Integration</h3>
+                    <p>Seamless integration with existing systems and workflows.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+
+
+
+
+
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+    <h2>Send Newsletter</h2>
+    <form method="POST">
+        {{ form.csrf_token }}
+        <div class="mb-3">
+            <label for="subject" class="form-label">Subject</label>
+            <input type="text" class="form-control" id="subject" name="subject" required>
+            {% if form.subject.errors %}
+                <div class="text-danger">
+                    {% for error in form.subject.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <div class="mb-3">
+            <label for="content" class="form-label">Content</label>
+            <textarea class="form-control" id="content" name="content" rows="10" required></textarea>
+            {% if form.content.errors %}
+                <div class="text-danger">
+                    {% for error in form.content.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        <button type="submit" name="action" value="preview" class="btn btn-secondary me-2">Preview</button>
+        <button type="submit" name="action" value="send" class="btn btn-primary">Send Newsletter</button>
+    </form>
+</div>
+
+{% if preview %}
+<div class="container mt-4">
+    <h3>Preview</h3>
+    <div class="card">
+        <div class="card-header">
+            <strong>Subject:</strong> {{ subject }}
+        </div>
+        <div class="card-body">
+            {{ content | nl2br }}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootsraps -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/styles.css">
+    <link rel="icon" type="image/x-icon" href="../static/images/favicon.ico">
+    <title>{% block title %}{% endblock %}</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block css %}{% endblock %}
+</head>
+<body>
+    <header class="p-3 text-bg-dark">
+        <div class="container">
+            <div class="d-flex flex-wrap align-items-center justify-content-center justify-content-lg-start">
+                <a href="/" class="d-flex align-items-center mb-2 mb-lg-0 text-white text-decoration-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-keyboard" viewBox="0 0 16 16">
+                        <path d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"/>
+                        <path d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z"/>
+                    </svg>
+                </a>
+
+                <ul class="nav col-12 col-lg-auto me-lg-auto mb-2 justify-content-center mb-md-0">
+                    <li><a href="{{ url_for('home') }}" class="nav-link px-2 text-secondary">Home</a></li>
+                    <li><a href="{{ url_for('features') }}" class="nav-link px-2 text-white">Features</a></li>
+                    <li><a href="{{ url_for('macos') }}" class="nav-link px-2 text-white">macOS</a></li>
+                    <li><a href="{{ url_for('windows') }}" class="nav-link px-2 text-white">Windows</a></li>
+                    <li><a href="{{ url_for('logs_history') }}" class="nav-link px-2 text-white">Logs History</a></li>
+                    <li><a href="{{ url_for('about') }}" class="nav-link px-2 text-white">About</a></li>
+                    <li><a href="{{ url_for('contact') }}" class="nav-link px-2 text-white">Contact</a></li>
+                </ul>
+
+                <div class="text-end">
+                    {% if current_user.is_authenticated %}
+                        <span class="text-white me-2">Welcome, {{ current_user.name }}</span>
+                        <a href="{{ url_for('logout') }}" class="btn btn-outline-light me-2">Logout</a>
+                    {% else %}
+                        <a class="btn btn-outline-light me-2" href="{{ url_for('login') }}">Login</a>
+                        <a class="btn btn-warning" href="{{ url_for('signup') }}">Sign-Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for message in messages %}
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}
+    {% endblock %}
+
+    <div class="container">
+        <footer class="py-5">
+            <hr class="hr" />
+            <div class="row">
+                <div class="col-6 col-md-2 mb-3">
+                    <h5>About US</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2"><a href="{{ url_for('home') }}" class="nav-link p-0 text-body-secondary">Home</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('about') }}" class="nav-link p-0 text-body-secondary">About</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('team') }}" class="nav-link p-0 text-body-secondary">Our Team</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('privacy') }}" class="nav-link p-0 text-body-secondary">Privacy</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('terms') }}" class="nav-link p-0 text-body-secondary">Terms</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-6 col-md-2 mb-3">
+                    <h5>For you</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2"><a href="{{ url_for('features') }}" class="nav-link p-0 text-body-secondary">Features</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('macos') }}" class="nav-link p-0 text-body-secondary">macOS</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('windows') }}" class="nav-link p-0 text-body-secondary">Windows</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('logs_history') }}" class="nav-link p-0 text-body-secondary">Logs</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('blog') }}" class="nav-link p-0 text-body-secondary">Blog</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-6 col-md-2 mb-3">
+                    <h5>Help</h5>
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2"><a href="{{ url_for('contact') }}" class="nav-link p-0 text-body-secondary">Contact Us</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('faqs') }}" class="nav-link p-0 text-body-secondary">FAQs</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('accessability') }}" class="nav-link p-0 text-body-secondary">Accessability</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('quickstart') }}" class="nav-link p-0 text-body-secondary">Quick Start Guide</a></li>
+                        <li class="nav-item mb-2"><a href="{{ url_for('billing') }}" class="nav-link p-0 text-body-secondary">Billing & Payments</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-md-5 offset-md-1 mb-3">
+                    <form action="{{ url_for('subscribe_newsletter') }}" method="POST">
+                        <h5>Subscribe to our newsletter</h5>
+                        <p>Monthly digest of what's new and exciting from us.</p>
+                        <div class="d-flex flex-column flex-sm-row w-100 gap-2">
+                            <label for="newsletter1" class="visually-hidden">Email address</label>
+                            <input id="newsletter1" name="newsletter1" type="email" class="form-control" placeholder="Email address" required>
+                            <button class="btn btn-warning" type="submit">Subscribe</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="d-flex flex-column flex-sm-row justify-content-between py-4 my-4 border-top">
+                <p>© {{ year }} KeyLogger Manager, Inc. All rights reserved.</p>
+                <ul class="list-unstyled d-flex justify-content-end">
+                    <li class="ms-3">
+                        <a class="link-body-emphasis" href="https://www.x.com/MotiWolff">
+                            <i class="bi bi-twitter-x" style="font-size: 24px;"></i>
+                        </a>
+                    </li>
+                    <li class="ms-3">
+                        <a class="link-body-emphasis" href="https://www.github.com/MotiWolff">
+                            <i class="bi bi-github" style="font-size: 24px;"></i>
+                        </a>
+                    </li>
+                    <li class="ms-3">
+                        <a class="link-body-emphasis" href="https://www.linkedin.com/in/mordechay-wolff-13b440180/">
+                            <i class="bi bi-linkedin" style="font-size: 24px;"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </footer>
+    </div>
+    <!-- Add this before the closing body tag -->
+<div class="modal fade" id="cookieSettingsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cookie Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="essentialCookies" checked disabled>
+                    <label class="form-check-label" for="essentialCookies">
+                        Essential Cookies (Required)
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="analyticsCookies">
+                    <label class="form-check-label" for="analyticsCookies">
+                        Analytics Cookies
+                    </label>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="preferenceCookies">
+                    <label class="form-check-label" for="preferenceCookies">
+                        Preference Cookies
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="saveCookieSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showCookieSettings() {
+    var modal = new bootstrap.Modal(document.getElementById('cookieSettingsModal'));
+    modal.show();
+}
+
+function saveCookieSettings() {
+    let settings = {
+        analytics: document.getElementById('analyticsCookies').checked,
+        preferences: document.getElementById('preferenceCookies').checked
+    };
+    localStorage.setItem('cookieSettings', JSON.stringify(settings));
+    bootstrap.Modal.getInstance(document.getElementById('cookieSettingsModal')).hide();
+}
+
+// Load saved settings when modal opens
+document.getElementById('cookieSettingsModal').addEventListener('show.bs.modal', function () {
+    let settings = JSON.parse(localStorage.getItem('cookieSettings') || '{"analytics":false,"preferences":false}');
+    document.getElementById('analyticsCookies').checked = settings.analytics;
+    document.getElementById('preferenceCookies').checked = settings.preferences;
+});
+</script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('cookieConsent')) {
+                document.getElementById('cookieConsent').style.display = 'block';
+            }
+        });
+        
+        function acceptCookies() {
+            localStorage.setItem('cookieConsent', 'accepted');
+            document.getElementById('cookieConsent').style.display = 'none';
+        }
+        
+        function declineCookies() {
+            localStorage.setItem('cookieConsent', 'declined');
+            document.getElementById('cookieConsent').style.display = 'none';
+        }
+        </script>
+    <!-- JavaScript Dependencies -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+<!-- Add this right after the <body> tag in base.html -->
+    <div class="cookie-consent-banner position-fixed bottom-0 start-0 end-0 p-3 bg-dark text-white" id="cookieConsent" style="display: none; z-index: 1000;">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="cookie-text">
+                This website uses cookies to ensure you get the best experience. 
+                <a href="{{ url_for('privacy') }}" class="text-warning">Learn more</a>
+            </div>
+            <div class="buttons">
+                <button class="btn btn-warning btn-sm mx-2" onclick="acceptCookies()">Accept</button>
+                <button class="btn btn-outline-light btn-sm" onclick="declineCookies()">Decline</button>
+            </div>
+        </div>
+    </div>
+</html>

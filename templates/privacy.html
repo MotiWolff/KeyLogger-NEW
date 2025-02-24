@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block title %}KeyLogger - Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <h1 class="mb-4">Privacy Policy</h1>
+            <p class="text-muted mb-4">Last updated: {{ year }}</p>
+
+            <div class="mb-5">
+                <h3>Overview</h3>
+                <p>This privacy policy outlines how KeyLogger Manager collects, uses, and protects information for authorized system monitoring purposes. We are committed to ensuring the security and privacy of all data collected through our services.</p>
+            </div>
+
+            <div class="mb-5">
+                <h3>Information Collection</h3>
+                <ul class="list-unstyled">
+                    <li class="mb-3">
+                        <h5>System Data</h5>
+                        <p>Our service collects authorized system activity data, including:</p>
+                        <ul>
+                            <li>Keyboard inputs on monitored systems</li>
+                            <li>Application usage statistics</li>
+                            <li>System performance metrics</li>
+                            <li>Time tracking data</li>
+                        </ul>
+                    </li>
+                    <li class="mb-3">
+                        <h5>Account Information</h5>
+                        <p>When you register, we collect:</p>
+                        <ul>
+                            <li>Name and email address</li>
+                            <li>Password (encrypted)</li>
+                            <li>Organization details</li>
+                            <li>System configuration preferences</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>Data Usage</h3>
+                <p>Collected data is used for:</p>
+                <ul>
+                    <li>Authorized system monitoring and analysis</li>
+                    <li>Performance optimization</li>
+                    <li>Security threat detection</li>
+                    <li>Productivity analysis (when authorized)</li>
+                    <li>System improvement and troubleshooting</li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>Data Protection</h3>
+                <p>We implement robust security measures including:</p>
+                <ul>
+                    <li>End-to-end encryption for all stored data</li>
+                    <li>Secure data transmission protocols</li>
+                    <li>Regular security audits and updates</li>
+                    <li>Access control and authentication mechanisms</li>
+                    <li>Data backup and recovery systems</li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>User Rights</h3>
+                <p>Users have the right to:</p>
+                <ul>
+                    <li>Access their collected data</li>
+                    <li>Request data modification or deletion</li>
+                    <li>Opt out of non-essential data collection</li>
+                    <li>Receive data collection notifications</li>
+                    <li>Export their data in standard formats</li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>Legal Compliance</h3>
+                <p>Our service adheres to:</p>
+                <ul>
+                    <li>Data protection regulations</li>
+                    <li>Privacy laws and guidelines</li>
+                    <li>Industry security standards</li>
+                    <li>Workplace monitoring regulations</li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>Contact Information</h3>
+                <p>For privacy-related inquiries, contact us at:</p>
+                <ul>
+                    <li>Email: privacy@keyloggermanager.com</li>
+                    <li>Phone: +1 (XXX) XXX-XXXX</li>
+                    <li>Address: [Your Business Address]</li>
+                </ul>
+            </div>
+
+            <div class="mb-5">
+                <h3>Cookie Policy</h3>
+                <p>We use cookies and similar technologies to enhance your experience on our platform.</p>
+                
+                <h5 class="mt-4">Types of Cookies We Use</h5>
+                <ul>
+                    <li><strong>Essential Cookies:</strong> Required for basic site functionality</li>
+                    <li><strong>Analytics Cookies:</strong> Help us understand how visitors use our site</li>
+                    <li><strong>Preference Cookies:</strong> Remember your settings and choices</li>
+                    <li><strong>Authentication Cookies:</strong> Maintain your login status</li>
+                </ul>
+            
+                <h5 class="mt-4">Cookie Management</h5>
+                <p>You can manage your cookie preferences through:</p>
+                <ul>
+                    <li>Your browser settings</li>
+                    <li>Our cookie consent banner</li>
+                    <li>Your account preferences</li>
+                </ul>
+            
+                <div class="mt-4">
+                    <button class="btn btn-warning" onclick="showCookieSettings()">Cookie Settings</button>
+                </div>
+            </div>
+
+            <hr class="my-5">
+
+            <div class="text-muted">
+                <p>This privacy policy may be updated periodically. Users will be notified of any significant changes.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
