@@ -1,7 +1,171 @@
 {% extends 'base.html' %}
 {% block title %}KeyLogger - Quickstart{% endblock %}
+
 {% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2>Setup Guide</h2>
+            
+            <!-- OS Detection and Custom Message -->
+            <div class="alert alert-info" id="os-message">
+                <!-- Will be filled by JavaScript -->
+            </div>
 
+            <!-- Tabs for different OS guides -->
+            <ul class="nav nav-tabs" id="osTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="windows-tab" data-bs-toggle="tab" data-bs-target="#windows" type="button" role="tab">
+                        <i class="bi bi-windows"></i> Windows Setup
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="macos-tab" data-bs-toggle="tab" data-bs-target="#macos" type="button" role="tab">
+                        <i class="bi bi-apple"></i> macOS Setup
+                    </button>
+                </li>
+            </ul>
 
+            <!-- Tab Content -->
+            <div class="tab-content mt-3" id="osTabContent">
+                <!-- Windows Setup -->
+                <div class="tab-pane fade show active" id="windows" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>Windows Setup Steps</h4>
+                            <ol class="list-group list-group-numbered mt-3">
+                                <li class="list-group-item">
+                                    <strong>Install Python</strong>
+                                    <p>Download and install Python 3.8 or higher from <a href="https://www.python.org/downloads/" target="_blank">python.org</a></p>
+                                    <div class="alert alert-secondary">
+                                        <i class="bi bi-check-circle"></i> Make sure to check "Add Python to PATH" during installation
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Download Project</strong>
+                                    <p>Clone or download the project from GitHub:</p>
+                                    <div class="alert alert-secondary">
+                                        <code>git clone https://github.com/yourusername/keylogger.git</code><br>
+                                        <code>cd keylogger</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Set Up Virtual Environment</strong>
+                                    <p>Open Command Prompt as Administrator and run:</p>
+                                    <div class="alert alert-secondary">
+                                        <code>python -m venv venv</code><br>
+                                        <code>venv\Scripts\activate</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Install Dependencies</strong>
+                                    <div class="alert alert-secondary">
+                                        <code>pip install -r requirements.txt</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Run the Application</strong>
+                                    <div class="alert alert-secondary">
+                                        <code>python main.py</code>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- macOS Setup -->
+                <div class="tab-pane fade" id="macos" role="tabpanel">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4>macOS Setup Steps</h4>
+                            <ol class="list-group list-group-numbered mt-3">
+                                <li class="list-group-item">
+                                    <strong>Install Python</strong>
+                                    <p>Open Terminal and install Python using Homebrew:</p>
+                                    <div class="alert alert-secondary">
+                                        <code>brew install python</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Download Project</strong>
+                                    <p>Clone the project:</p>
+                                    <div class="alert alert-secondary">
+                                        <code>git clone https://github.com/yourusername/keylogger.git</code><br>
+                                        <code>cd keylogger</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Set Up Virtual Environment</strong>
+                                    <div class="alert alert-secondary">
+                                        <code>python3 -m venv venv</code><br>
+                                        <code>source venv/bin/activate</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Install Dependencies</strong>
+                                    <div class="alert alert-secondary">
+                                        <code>pip3 install -r requirements.txt</code>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Grant Permissions</strong>
+                                    <p>Open System Preferences → Security & Privacy → Privacy → Accessibility</p>
+                                    <p>Add Terminal or your IDE to the allowed applications</p>
+                                </li>
+                                <li class="list-group-item">
+                                    <strong>Run the Application</strong>
+                                    <div class="alert alert-secondary">
+                                        <code>python3 main.py</code>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Common Issues Section -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h4><i class="bi bi-tools"></i> Common Issues</h4>
+                    <ul class="list-group">
+                        <li class="list-group-item">
+                            <strong>ModuleNotFoundError</strong>
+                            <p>Make sure you've activated the virtual environment and installed requirements</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Permission Error</strong>
+                            <p>Run as Administrator (Windows) or grant accessibility permissions (macOS)</p>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Port Already in Use</strong>
+                            <p>Check if another instance is running or use a different port</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Detect OS and show appropriate message
+    const userAgent = navigator.userAgent.toLowerCase();
+    const osMessage = document.getElementById('os-message');
+    
+    if (userAgent.includes('win')) {
+        osMessage.innerHTML = '<strong>Windows Detected:</strong> Follow the Windows setup guide below.';
+        document.getElementById('windows-tab').click();
+    } else if (userAgent.includes('mac')) {
+        osMessage.innerHTML = '<strong>macOS Detected:</strong> Follow the macOS setup guide below.';
+        document.getElementById('macos-tab').click();
+    } else {
+        osMessage.innerHTML = '<strong>Other OS Detected:</strong> Your operating system might not be supported.';
+    }
+});
+</script>
 {% endblock %}
