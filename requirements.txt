@@ -11,9 +11,12 @@ SQLAlchemy==2.0.23
 pynput==1.7.6
 pyobjc-framework-Quartz==10.1 ; sys_platform == 'darwin'
 pyobjc-core==10.1 ; sys_platform == 'darwin'
+psutil==5.9.5
 
 # Security
 python-dotenv==1.0.0
+cryptography==41.0.4
+bcrypt==4.0.1
 
 # Development
 black==23.11.0
@@ -21,4 +24,20 @@ flake8==6.1.0
 
 # Development & Testing
 pytest==7.4.3
-logging==0.5.1.2 
+
+# System Info
+platform-utils==0.3.0
+python-dateutil==2.8.2
+
+# Networking
+requests==2.31.0
+urllib3==2.0.7
+
+# Threading
+threading2==0.3.1
+
+# Time and Date
+pytz==2023.3.post1
+
+# OS Specific
+pywin32==306 ; sys_platform == 'win32' 

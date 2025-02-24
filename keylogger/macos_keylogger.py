@@ -5,22 +5,29 @@ from datetime import datetime
 import os
 import sqlite3
 import logging
-from Quartz import (
-    CGEventTapCreate,
-    kCGSessionEventTap,
-    kCGHeadInsertEventTap,
-    CGEventMaskBit,
-    kCGEventKeyDown,
-    CGEventTapEnable,
-    CFMachPortCreateRunLoopSource,
-    CFRunLoopGetCurrent,
-    CFRunLoopAddSource,
-    kCFRunLoopCommonModes,
-    CGEventGetIntegerValueField,
-    kCGKeyboardEventKeycode,
-    CFRunLoopRun,
-    NSEvent
-)
+
+# macOS-specific imports, wrapped in try-except
+try:
+    from Quartz import (
+        CGEventTapCreate,
+        kCGSessionEventTap,
+        kCGHeadInsertEventTap,
+        CGEventMaskBit,
+        kCGEventKeyDown,
+        CGEventTapEnable,
+        CFMachPortCreateRunLoopSource,
+        CFRunLoopGetCurrent,
+        CFRunLoopAddSource,
+        kCFRunLoopCommonModes,
+        CGEventGetIntegerValueField,
+        kCGKeyboardEventKeycode,
+        CFRunLoopRun,
+        NSEvent
+    )
+except ImportError:
+    # On non-macOS systems, these will be None
+    pass
+
 import platform
 import psutil
 import socket
