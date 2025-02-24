@@ -2,99 +2,64 @@
 let devices = [];
 let isEncrypted = {};  // Store encryption state for each device
 
+// Get CSRF token from meta tag
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
 async function refreshDevices() {
     try {
-        const response = await fetch('/api/get_target_machines_list');
-        if (response.ok) {
-            const devicesList = await response.json();
-            updateDevicesList(devicesList);
-        } else if (response.status === 401) {
-            window.location.href = '/login';
+        const response = await fetch('/api/devices', {
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
+        
+        const devices = await response.json();
+        updateDevicesList(devices);
     } catch (error) {
         console.error('Error fetching devices:', error);
-        showAlert('Error fetching devices list', 'danger');
+        // Optionally show an error message to the user
+        const devicesList = document.getElementById('devices-list');
+        devicesList.innerHTML = '<div class="alert alert-danger">Error loading devices. Please try again later.</div>';
     }
 }
 
 function updateDevicesList(devices) {
-    const container = document.getElementById('devices-list');
-    container.innerHTML = '';
+    const devicesList = document.getElementById('devices-list');
+    const template = document.getElementById('device-template');
+    
+    devicesList.innerHTML = '';
     
     if (devices.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">No devices connected</div>';
+        devicesList.innerHTML = '<div class="alert alert-info">No devices connected. Click "New Connection" to add a device.</div>';
         return;
     }
     
     devices.forEach(device => {
-        // Set initial state for encryption
-        if (!encryptionState.hasOwnProperty(device.device_id)) {
-            encryptionState[device.device_id] = false;
-        }
+        const clone = template.content.cloneNode(true);
+        const deviceItem = clone.querySelector('.device-item');
         
-        const deviceHtml = `
-            <div class="device-item mb-3" data-device-id="${device.device_id}">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5 class="card-title">${device.name || device.device_id}</h5>
-                                <p class="card-text device-id">${device.device_id}</p>
-                            </div>
-                            <span class="badge ${device.is_active ? 'bg-success' : 'bg-danger'} device-status">
-                                ${device.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        
-                        <div class="device-info small text-muted mb-3">
-                            <div><i class="bi bi-clock"></i> Last seen: ${formatDate(device.last_seen || new Date())}</div>
-                        </div>
-                        
-                        <div class="btn-group mb-3">
-                            <button class="btn btn-success start-logging" onclick="startLogging(this)" disabled>
-                                <i class="bi bi-play-circle"></i> Start
-                            </button>
-                            <button class="btn btn-danger stop-logging" onclick="stopLogging(this)" disabled>
-                                <i class="bi bi-stop-circle"></i> Stop
-                            </button>
-                            <button class="btn btn-primary view-logs" onclick="viewLogs(this)">
-                                <i class="bi bi-eye"></i> View Logs
-                            </button>
-                            <button class="btn btn-secondary toggle-encryption" onclick="toggleEncryption(this)">
-                                <i class="bi bi-lock"></i> <span>Decrypt</span>
-                            </button>
-                            <button class="btn btn-danger" onclick="removeDevice(this)">
-                                <i class="bi bi-trash"></i> Remove
-                            </button>
-                        </div>
-                        
-                        <div class="logs-container mt-3" style="display: none;">
-                            <div class="card">
-                                <div class="card-body">
-                                    <pre class="logs-content">No logs available</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', deviceHtml);
+        // Set device ID as data attribute
+        deviceItem.dataset.deviceId = device.id;
         
-        // Update button states after adding to DOM
-        const deviceItem = container.lastElementChild;
-        const startBtn = deviceItem.querySelector('.start-logging');
-        const stopBtn = deviceItem.querySelector('.stop-logging');
+        // Update device information
+        clone.querySelector('.device-id').textContent = device.id;
+        clone.querySelector('.device-name-text').textContent = device.name || 'Unnamed Device';
         
+        // Update status badge
+        const statusBadge = clone.querySelector('.device-status');
         if (device.is_active) {
-            // When device is active, enable both buttons but set their states opposite to each other
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
+            statusBadge.classList.add('bg-success');
+            statusBadge.textContent = 'Connected';
         } else {
-            // When device is inactive, disable both start and stop buttons
-            startBtn.disabled = true;
-            stopBtn.disabled = true;
+            statusBadge.classList.add('bg-secondary');
+            statusBadge.textContent = 'Disconnected';
         }
+        
+        devicesList.appendChild(clone);
     });
 }
 
@@ -104,17 +69,44 @@ function formatDate(dateString) {
     return date.toLocaleString();
 }
 
+async function toggleLogs(btn) {
+    const logsContainer = btn.closest('.device-item').querySelector('.logs-container');
+    const logsContent = logsContainer.querySelector('.logs-content');
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
+
+    if (logsContainer.style.display === 'none') {
+        try {
+            const response = await fetch(`/api/logs/${deviceId}`);
+            if (response.ok) {
+                const logs = await response.json();
+                if (logs.length > 0) {
+                    // The logs are already formatted from the server as:
+                    // "[timestamp] Device-id: content"
+                    logsContent.innerHTML = logs.join('<br>');
+                } else {
+                    logsContent.textContent = 'No logs available';
+                }
+                logsContainer.style.display = 'block';
+                btn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide Logs';
+            }
+        } catch (error) {
+            console.error('Error fetching logs:', error);
+            logsContent.textContent = 'Error loading logs';
+        }
+    } else {
+        logsContainer.style.display = 'none';
+        btn.innerHTML = '<i class="bi bi-eye"></i> View Logs';
+    }
+}
+
 async function startLogging(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
     try {
-        console.log('Starting logging for device:', deviceId);
         const response = await fetch('/api/toggle_logging', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 device_id: deviceId,
@@ -123,42 +115,29 @@ async function startLogging(btn) {
         });
         
         if (response.ok) {
-            const data = await response.json();
-            console.log('Start response:', data);
-            
-            // Update UI immediately
-            const startBtn = deviceItem.querySelector('.start-logging');
-            const stopBtn = deviceItem.querySelector('.stop-logging');
-            const statusBadge = deviceItem.querySelector('.device-status');
-            
-            startBtn.disabled = true;
-            stopBtn.disabled = false;  // Enable stop button when logging starts
-            statusBadge.className = 'badge bg-success device-status';
-            statusBadge.textContent = 'Active';
-            
-            showAlert(data.message || 'Logging started', 'success');
+            btn.disabled = true;
+            btn.nextElementSibling.disabled = false; // Enable stop button
+            const statusBadge = btn.closest('.device-item').querySelector('.device-status');
+            statusBadge.textContent = 'Logging';
+            statusBadge.className = 'device-status badge bg-warning';
         } else {
             const error = await response.json();
-            console.error('Start error:', error);
-            showAlert(error.error || 'Error starting logging', 'danger');
+            alert('Failed to start logging: ' + error.message);
         }
     } catch (error) {
-        console.error('Error starting logging:', error);
-        showAlert('Error starting logging', 'danger');
+        console.error('Error:', error);
+        alert('Failed to start logging');
     }
 }
 
 async function stopLogging(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
     try {
-        console.log('Stopping logging for device:', deviceId);
         const response = await fetch('/api/toggle_logging', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 device_id: deviceId,
@@ -167,55 +146,54 @@ async function stopLogging(btn) {
         });
         
         if (response.ok) {
-            const data = await response.json();
-            console.log('Stop response:', data);
-            
-            // Update UI immediately
-            const startBtn = deviceItem.querySelector('.start-logging');
-            const stopBtn = deviceItem.querySelector('.stop-logging');
-            const statusBadge = deviceItem.querySelector('.device-status');
-            
-            startBtn.disabled = false;  // Enable start button when logging stops
-            stopBtn.disabled = true;
-            statusBadge.className = 'badge bg-danger device-status';
-            statusBadge.textContent = 'Inactive';
-            
-            showAlert(data.message || 'Logging stopped', 'success');
+            btn.disabled = true;
+            btn.previousElementSibling.disabled = false; // Enable start button
+            const statusBadge = btn.closest('.device-item').querySelector('.device-status');
+            statusBadge.textContent = 'Connected';
+            statusBadge.className = 'device-status badge bg-success';
         } else {
             const error = await response.json();
-            console.error('Stop error:', error);
-            showAlert(error.error || 'Error stopping logging', 'danger');
+            alert('Failed to stop logging: ' + error.message);
         }
     } catch (error) {
-        console.error('Error stopping logging:', error);
-        showAlert('Error stopping logging', 'danger');
+        console.error('Error:', error);
+        alert('Failed to stop logging');
     }
 }
 
 let encryptionState = {};
 
-function toggleEncryption(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    
-    // Toggle the encryption state for this device
-    encryptionState[deviceId] = !encryptionState[deviceId];
-    
-    // Update button text and icon
-    const span = btn.querySelector('span');
-    const icon = btn.querySelector('i');
-    if (encryptionState[deviceId]) {
-        span.textContent = 'Encrypt';
-        icon.className = 'bi bi-unlock';
-    } else {
-        span.textContent = 'Decrypt';
-        icon.className = 'bi bi-lock';
-    }
-    
-    // Refresh logs with new encryption state
-    const logsContainer = deviceItem.querySelector('.logs-container');
-    if (logsContainer.style.display !== 'none') {
-        viewLogs(deviceItem.querySelector('.view-logs'));
+async function toggleEncryption(btn) {
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
+    try {
+        const response = await fetch('/api/toggle_encryption', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                device_id: deviceId
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const icon = btn.querySelector('i');
+            if (data.is_encrypted) {
+                icon.className = 'bi bi-lock-fill';
+                btn.title = 'Encryption enabled';
+            } else {
+                icon.className = 'bi bi-unlock';
+                btn.title = 'Encryption disabled';
+            }
+        } else {
+            const error = await response.json();
+            alert('Failed to toggle encryption: ' + error.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to toggle encryption');
     }
 }
 
@@ -242,70 +220,91 @@ async function viewLogs(btn) {
 }
 
 async function removeDevice(btn) {
-    if (!confirm('Are you sure you want to remove this device?')) return;
-    
     const deviceItem = btn.closest('.device-item');
     const deviceId = deviceItem.dataset.deviceId;
     
+    if (!confirm('Are you sure you want to remove this device?')) return;
+    
     try {
+        // First check if logging is active and stop it
+        const statusBadge = deviceItem.querySelector('.device-status');
+        if (statusBadge.textContent === 'Logging') {
+            const stopResponse = await fetch('/api/toggle_logging', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    device_id: deviceId,
+                    action: 'stop'
+                })
+            });
+            
+            if (!stopResponse.ok) {
+                console.warn('Failed to stop logging, continuing with device removal');
+            }
+        }
+        
+        // Then remove the device
         const response = await fetch('/api/remove_device', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
             },
-            body: JSON.stringify({ device_id: deviceId })
+            body: JSON.stringify({
+                device_id: deviceId
+            })
         });
         
         if (response.ok) {
+            // Remove from UI only after successful server response
             deviceItem.remove();
             showAlert('Device removed successfully', 'success');
-            await refreshDevices();
         } else {
             const error = await response.json();
-            showAlert(error.error || 'Error removing device', 'danger');
+            throw new Error(error.error || 'Failed to remove device');
         }
     } catch (error) {
-        console.error('Error removing device:', error);
-        showAlert('Error removing device', 'danger');
+        console.error('Error:', error);
+        showAlert(error.message || 'Failed to remove device', 'danger');
     }
 }
 
 async function createNewConnection() {
     try {
-        const deviceId = 'Device-' + Math.random().toString(36).substr(2, 9);
         const response = await fetch('/api/register_device', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
-                device_id: deviceId,
-                name: `MacBook-${deviceId}`
+                type: 'macos'
             })
         });
         
         if (response.ok) {
-            showAlert('New device registered successfully', 'success');
+            const data = await response.json();
             refreshDevices();
-        } else if (response.status === 401) {
-            // Redirect to login page
-            window.location.href = '/login';
+        } else {
+            console.error('Failed to register device');
         }
     } catch (error) {
-        console.error('Error creating new connection:', error);
-        showAlert('Error creating new connection', 'danger');
+        console.error('Error:', error);
     }
 }
 
 function showAlert(message, type) {
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
+    alertDiv.style.zIndex = '1050';
     alertDiv.innerHTML = `
         ${message}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
-    
-    document.querySelector('.container').insertAdjacentElement('afterbegin', alertDiv);
+    document.body.appendChild(alertDiv);
     
     setTimeout(() => {
         alertDiv.remove();
@@ -319,3 +318,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Add periodic status updates
 setInterval(refreshDevices, 30000); // Update every 30 seconds 
+
+// Add this function to simulate keystrokes (for testing)
+async function simulateKeystrokes(deviceId) {
+    try {
+        const response = await fetch('/api/log_keystrokes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                device_id: deviceId,
+                keystrokes: 'Hello, this is a test keystroke!'
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            console.error('Error logging keystrokes:', error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+} 

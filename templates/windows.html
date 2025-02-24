@@ -7,30 +7,55 @@
 {% endblock %}
 
 {% block content %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 <div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h2>Windows Keylogger</h2>
-            <div class="card mt-4">
-                <div class="card-body">
-                    <h5 class="card-title">Register New Device</h5>
-                    <form id="register-device-form" class="row g-3">
-                        <div class="col-md-6">
-                            <label for="device-name" class="form-label">Device Name</label>
-                            <input type="text" class="form-control" id="device-name" required>
-                        </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-primary">Register Device</button>
-                        </div>
-                    </form>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Windows Devices</h2>
+        <button class="btn btn-primary" onclick="createNewConnection()">
+            <i class="bi bi-plus-circle"></i> New Connection
+        </button>
+    </div>
+
+    <div id="devices-list">
+        <!-- Devices will be loaded here -->
+    </div>
+
+    <!-- Device template -->
+    <template id="device-template">
+        <div class="device-item card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="device-name-text mb-1">Device Name</h5>
+                        <small class="text-muted device-id">ID: </small>
+                    </div>
+                    <span class="device-status badge">Status</span>
+                </div>
+                <div class="btn-group mt-3" role="group">
+                    <button class="btn btn-success btn-sm" onclick="startLogging(this)">
+                        <i class="bi bi-play-fill"></i> Start
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="stopLogging(this)" disabled>
+                        <i class="bi bi-stop-fill"></i> Stop
+                    </button>
+                    <button class="btn btn-info btn-sm" onclick="toggleLogs(this)">
+                        <i class="bi bi-eye"></i> View Logs
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleEncryption(this)" title="Toggle encryption">
+                        <i class="bi bi-unlock"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="removeDevice(this)" title="Remove Device">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                <div class="logs-container mt-3" style="display: none;">
+                    <div class="logs-content bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                    </div>
                 </div>
             </div>
-
-            <div id="devices-list" class="mt-4">
-                <!-- Devices will be loaded here -->
-            </div>
         </div>
-    </div>
+    </template>
 </div>
 
 <!-- Toast container for alerts -->

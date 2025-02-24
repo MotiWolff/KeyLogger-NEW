@@ -5,118 +5,168 @@
 <div class="container mt-4">
     <div class="row">
         <div class="col-12">
-            <h2>Setup Guide</h2>
+            <h2>Keylogger Setup Guide</h2>
             
             <!-- OS Detection and Custom Message -->
             <div class="alert alert-info" id="os-message">
                 <!-- Will be filled by JavaScript -->
             </div>
 
-            <!-- Tabs for different OS guides -->
-            <ul class="nav nav-tabs" id="osTabs" role="tablist">
+            <!-- Tabs for different setups -->
+            <ul class="nav nav-tabs" id="setupTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="windows-tab" data-bs-toggle="tab" data-bs-target="#windows" type="button" role="tab">
-                        <i class="bi bi-windows"></i> Windows Setup
+                    <button class="nav-link active" id="local-tab" data-bs-toggle="tab" data-bs-target="#local" type="button" role="tab">
+                        <i class="bi bi-laptop"></i> Local Setup
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="macos-tab" data-bs-toggle="tab" data-bs-target="#macos" type="button" role="tab">
-                        <i class="bi bi-apple"></i> macOS Setup
+                    <button class="nav-link" id="remote-tab" data-bs-toggle="tab" data-bs-target="#remote" type="button" role="tab">
+                        <i class="bi bi-globe"></i> Remote Setup
                     </button>
                 </li>
             </ul>
 
             <!-- Tab Content -->
-            <div class="tab-content mt-3" id="osTabContent">
-                <!-- Windows Setup -->
-                <div class="tab-pane fade show active" id="windows" role="tabpanel">
+            <div class="tab-content mt-3" id="setupTabContent">
+                <!-- Local Setup -->
+                <div class="tab-pane fade show active" id="local" role="tabpanel">
                     <div class="card">
                         <div class="card-body">
-                            <h4>Windows Setup Steps</h4>
-                            <ol class="list-group list-group-numbered mt-3">
-                                <li class="list-group-item">
-                                    <strong>Install Python</strong>
-                                    <p>Download and install Python 3.8 or higher from <a href="https://www.python.org/downloads/" target="_blank">python.org</a></p>
-                                    <div class="alert alert-secondary">
-                                        <i class="bi bi-check-circle"></i> Make sure to check "Add Python to PATH" during installation
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <strong>Download Project</strong>
-                                    <p>Clone or download the project from GitHub:</p>
-                                    <div class="alert alert-secondary">
-                                        <code>git clone https://github.com/yourusername/keylogger.git</code><br>
-                                        <code>cd keylogger</code>
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <strong>Set Up Virtual Environment</strong>
-                                    <p>Open Command Prompt as Administrator and run:</p>
-                                    <div class="alert alert-secondary">
-                                        <code>python -m venv venv</code><br>
-                                        <code>venv\Scripts\activate</code>
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <strong>Install Dependencies</strong>
-                                    <div class="alert alert-secondary">
-                                        <code>pip install -r requirements.txt</code>
-                                    </div>
-                                </li>
-                                <li class="list-group-item">
-                                    <strong>Run the Application</strong>
-                                    <div class="alert alert-secondary">
-                                        <code>python main.py</code>
-                                    </div>
-                                </li>
-                            </ol>
+                            <h4>Local Setup (Same Machine)</h4>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i> Follow these steps to monitor the current machine
+                            </div>
+                            
+                            <!-- OS-specific instructions -->
+                            <div class="os-specific" id="windows-local">
+                                <h5><i class="bi bi-windows"></i> Windows Setup</h5>
+                                <ol class="list-group list-group-numbered mt-3">
+                                    <li class="list-group-item">
+                                        <strong>Install Python</strong>
+                                        <p>Download and install Python 3.8+ from <a href="https://www.python.org/downloads/" target="_blank">python.org</a></p>
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i> Check "Add Python to PATH" during installation
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Install Required Packages</strong>
+                                        <div class="alert alert-secondary">
+                                            <code>pip install pynput flask</code>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Run as Administrator</strong>
+                                        <p>Open Command Prompt as Administrator and run:</p>
+                                        <div class="alert alert-secondary">
+                                            <code>python app.py</code>
+                                        </div>
+                                    </li>
+                                </ol>
+                            </div>
+                            
+                            <div class="os-specific" id="macos-local">
+                                <h5><i class="bi bi-apple"></i> macOS Setup</h5>
+                                <ol class="list-group list-group-numbered mt-3">
+                                    <li class="list-group-item">
+                                        <strong>Install Python</strong>
+                                        <div class="alert alert-secondary">
+                                            <code>brew install python</code>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Install Required Packages</strong>
+                                        <div class="alert alert-secondary">
+                                            <code>pip3 install pynput flask</code>
+                                        </div>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Grant Permissions</strong>
+                                        <p>System Preferences → Security & Privacy → Privacy → Accessibility</p>
+                                        <p>Add Terminal or your IDE to allowed applications</p>
+                                    </li>
+                                    <li class="list-group-item">
+                                        <strong>Run Application</strong>
+                                        <div class="alert alert-secondary">
+                                            <code>python3 app.py</code>
+                                        </div>
+                                    </li>
+                                </ol>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- macOS Setup -->
-                <div class="tab-pane fade" id="macos" role="tabpanel">
+                <!-- Remote Setup -->
+                <div class="tab-pane fade" id="remote" role="tabpanel">
                     <div class="card">
                         <div class="card-body">
-                            <h4>macOS Setup Steps</h4>
+                            <h4>Remote Setup (Different Machines)</h4>
+                            
+                            <!-- Controller Setup -->
+                            <h5>Controller Setup (Any OS)</h5>
                             <ol class="list-group list-group-numbered mt-3">
                                 <li class="list-group-item">
-                                    <strong>Install Python</strong>
-                                    <p>Open Terminal and install Python using Homebrew:</p>
+                                    <strong>Start the Server</strong>
+                                    <p>Run the application:</p>
                                     <div class="alert alert-secondary">
-                                        <code>brew install python</code>
+                                        <code>python app.py</code> (Windows)<br>
+                                        <code>python3 app.py</code> (macOS)
                                     </div>
                                 </li>
                                 <li class="list-group-item">
-                                    <strong>Download Project</strong>
-                                    <p>Clone the project:</p>
+                                    <strong>Get IP Address</strong>
+                                    <p>Windows:</p>
                                     <div class="alert alert-secondary">
-                                        <code>git clone https://github.com/yourusername/keylogger.git</code><br>
-                                        <code>cd keylogger</code>
+                                        <code>ipconfig</code>
+                                    </div>
+                                    <p>macOS:</p>
+                                    <div class="alert alert-secondary">
+                                        <code>ifconfig | grep "inet " | grep -v 127.0.0.1</code>
                                     </div>
                                 </li>
                                 <li class="list-group-item">
-                                    <strong>Set Up Virtual Environment</strong>
-                                    <div class="alert alert-secondary">
-                                        <code>python3 -m venv venv</code><br>
-                                        <code>source venv/bin/activate</code>
-                                    </div>
+                                    <strong>Configure Firewall</strong>
+                                    <p>Windows: Allow Python in Windows Defender Firewall</p>
+                                    <p>macOS: Allow Python in System Preferences → Security & Privacy → Firewall</p>
                                 </li>
                                 <li class="list-group-item">
-                                    <strong>Install Dependencies</strong>
-                                    <div class="alert alert-secondary">
-                                        <code>pip3 install -r requirements.txt</code>
-                                    </div>
+                                    <strong>Create Connection</strong>
+                                    <ul>
+                                        <li>Go to Windows/macOS page based on target</li>
+                                        <li>Click "New Connection"</li>
+                                        <li>Note the connection details</li>
+                                    </ul>
+                                </li>
+                            </ol>
+
+                            <!-- Target Setup -->
+                            <h5 class="mt-4">Target Setup (Windows or macOS)</h5>
+                            <ol class="list-group list-group-numbered mt-3">
+                                <li class="list-group-item">
+                                    <strong>Install Python & Packages</strong>
+                                    <p>Follow the Local Setup steps for your OS</p>
                                 </li>
                                 <li class="list-group-item">
-                                    <strong>Grant Permissions</strong>
-                                    <p>Open System Preferences → Security & Privacy → Privacy → Accessibility</p>
-                                    <p>Add Terminal or your IDE to the allowed applications</p>
+                                    <strong>Download Required Files</strong>
+                                    <p>For Windows targets:</p>
+                                    <ul>
+                                        <li><a href="https://drive.google.com/drive/folders/1IYOgUKSF-CPjVe8-4lqOTaVJ6rXTP2Vg?usp=sharing" target="_blank">Download Windows Files</a></li>
+                                        <li>Required files:
+                                            <ul>
+                                                <li>windows_keylogger.py (8 KB)</li>
+                                                <li>windows_client.py (2 KB)</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                    <p>For macOS targets:</p>
+                                    <ul>
+                                        <li>Use the macos_keylogger.py and macos_client.py from your installation</li>
+                                    </ul>
                                 </li>
                                 <li class="list-group-item">
-                                    <strong>Run the Application</strong>
+                                    <strong>Run Client</strong>
                                     <div class="alert alert-secondary">
-                                        <code>python3 main.py</code>
+                                        <code>python client.py &lt;device-id&gt; &lt;controller-ip&gt; &lt;port&gt;</code>
                                     </div>
                                 </li>
                             </ol>
@@ -125,22 +175,34 @@
                 </div>
             </div>
 
-            <!-- Common Issues Section -->
+            <!-- Troubleshooting Section -->
             <div class="card mt-4">
                 <div class="card-body">
-                    <h4><i class="bi bi-tools"></i> Common Issues</h4>
+                    <h4><i class="bi bi-tools"></i> Troubleshooting</h4>
                     <ul class="list-group">
                         <li class="list-group-item">
-                            <strong>ModuleNotFoundError</strong>
-                            <p>Make sure you've activated the virtual environment and installed requirements</p>
+                            <strong>Connection Issues</strong>
+                            <ul>
+                                <li>Verify IP address and port</li>
+                                <li>Check firewall settings</li>
+                                <li>Ensure both machines are on same network</li>
+                                <li>Try pinging the controller IP</li>
+                            </ul>
                         </li>
                         <li class="list-group-item">
-                            <strong>Permission Error</strong>
-                            <p>Run as Administrator (Windows) or grant accessibility permissions (macOS)</p>
+                            <strong>Permission Errors</strong>
+                            <ul>
+                                <li>Windows: Run as Administrator</li>
+                                <li>macOS: Check Accessibility permissions</li>
+                            </ul>
                         </li>
                         <li class="list-group-item">
-                            <strong>Port Already in Use</strong>
-                            <p>Check if another instance is running or use a different port</p>
+                            <strong>Port Conflicts</strong>
+                            <p>Check and kill existing processes:</p>
+                            <div class="alert alert-secondary">
+                                Windows: <code>netstat -ano | findstr :&lt;port&gt;</code><br>
+                                macOS: <code>lsof -i :&lt;port&gt;</code>
+                            </div>
                         </li>
                     </ul>
                 </div>
@@ -153,18 +215,25 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Detect OS and show appropriate message
     const userAgent = navigator.userAgent.toLowerCase();
     const osMessage = document.getElementById('os-message');
     
+    // Show/hide OS-specific local instructions
+    const windowsLocal = document.getElementById('windows-local');
+    const macosLocal = document.getElementById('macos-local');
+    
     if (userAgent.includes('win')) {
-        osMessage.innerHTML = '<strong>Windows Detected:</strong> Follow the Windows setup guide below.';
-        document.getElementById('windows-tab').click();
+        osMessage.innerHTML = '<strong>Windows Detected:</strong> Choose local setup for this machine or remote setup for different machines.';
+        windowsLocal.style.display = 'block';
+        macosLocal.style.display = 'none';
     } else if (userAgent.includes('mac')) {
-        osMessage.innerHTML = '<strong>macOS Detected:</strong> Follow the macOS setup guide below.';
-        document.getElementById('macos-tab').click();
+        osMessage.innerHTML = '<strong>macOS Detected:</strong> Choose local setup for this machine or remote setup for different machines.';
+        windowsLocal.style.display = 'none';
+        macosLocal.style.display = 'block';
     } else {
-        osMessage.innerHTML = '<strong>Other OS Detected:</strong> Your operating system might not be supported.';
+        osMessage.innerHTML = '<strong>Other OS Detected:</strong> This application supports Windows and macOS.';
+        windowsLocal.style.display = 'block';
+        macosLocal.style.display = 'block';
     }
 });
 </script>

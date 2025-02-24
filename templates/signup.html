@@ -5,57 +5,62 @@
 {% block content %}
 <div class="container py-5">
     <div class="card-body p-md-5">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
         <div class="row justify-content-center">
           <div class="col-md-10 col-lg-6 col-xl-5 order-2 order-lg-1">
             <p class="text-center text-body h1 fw-bold mb-5 mt-4">Sign up</p>
 
-            <form method="POST" action="{{ url_for('signup') }}">
+            <form method="POST" action="{{ url_for('signup') }}" class="text-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <img class="mb-4" src="../static/images/keyboard.svg" alt="" width="72" height="57">
+                <h1 class="h3 mb-3 fw-normal">Create Account</h1>
+                
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-danger">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="floatingName" 
+                           name="name" placeholder="Full Name" required>
+                    <label for="floatingName">Full Name</label>
+                </div>
 
-              <div class="d-flex flex-row align-items-center mb-4">
-                <i class="fas text-body fa-user fa-lg me-3 fa-fw"></i>
-                <div data-mdb-input-init="" class="form-outline flex-fill mb-0" data-mdb-input-initialized="true">
-                  <input type="text" name="name" id="form3Example1c" placeholder="Full Name:" class="form-control">
-                <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 71.2px;"></div><div class="form-notch-trailing"></div></div></div>
-              </div>
+                <div class="form-floating mb-3">
+                    <input type="email" class="form-control" id="floatingEmail" 
+                           name="email" placeholder="name@example.com" required>
+                    <label for="floatingEmail">Email address</label>
+                </div>
 
-              <div class="d-flex flex-row align-items-center mb-4">
-                <i class="fas text-body fa-envelope fa-lg me-3 fa-fw"></i>
-                <div data-mdb-input-init="" class="form-outline flex-fill mb-0" data-mdb-input-initialized="true">
-                  <input type="email" name="email" id="form3Example3c" placeholder="Email Address:" class="form-control">
-                <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 69.6px;"></div><div class="form-notch-trailing"></div></div></div>
-              </div>
+                <div class="form-floating mb-3 position-relative">
+                    <input type="password" class="form-control" id="floatingPassword" 
+                           name="password" placeholder="Password" required
+                           minlength="8">
+                    <label for="floatingPassword">Password</label>
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y" 
+                            onclick="togglePassword('floatingPassword', 'togglePasswordIcon')" style="z-index: 10;">
+                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                    </button>
+                </div>
 
-              <div class="d-flex flex-row align-items-center mb-4">
-                <i class="fas text-body fa-lock fa-lg me-3 fa-fw"></i>
-                <div data-mdb-input-init="" class="form-outline flex-fill mb-0" data-mdb-input-initialized="true">
-                  <input type="password" name="password" id="form3Example4c" placeholder="Password:" class="form-control">
-                <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 64px;"></div><div class="form-notch-trailing"></div></div></div>
-              </div>
+                <div class="form-floating mb-3 position-relative">
+                    <input type="password" class="form-control" id="floatingPassword2" 
+                           name="password2" placeholder="Confirm Password" required
+                           minlength="8">
+                    <label for="floatingPassword2">Confirm Password</label>
+                    <button type="button" class="btn btn-link position-absolute end-0 top-50 translate-middle-y" 
+                            onclick="togglePassword('floatingPassword2', 'togglePasswordIcon2')" style="z-index: 10;">
+                        <i class="bi bi-eye" id="togglePasswordIcon2"></i>
+                    </button>
+                </div>
 
-              <div class="d-flex flex-row align-items-center mb-4">
-                <i class="fas text-body fa-key fa-lg me-3 fa-fw"></i>
-                <div data-mdb-input-init="" class="form-outline flex-fill mb-0" data-mdb-input-initialized="true">
-                  <input type="password" name="password2" id="form3Example4cd" placeholder="Confirm your password:" class="form-control">
-                <div class="form-notch"><div class="form-notch-leading" style="width: 9px;"></div><div class="form-notch-middle" style="width: 136px;"></div><div class="form-notch-trailing"></div></div></div>
-              </div>
-
-              <div class="form-check text-body d-flex justify-content-center mb-5">
-                <input class="form-check-input me-2" type="checkbox" value="" id="form2Example3c">
-                <label class="form-check-label" for="form2Example3">
-                  I agree all statements in <a href="#!">Terms of service</a>
-                </label>
-              </div>
-
-              <div class="d-flex justify-content-center mx-4 mb-3 mb-lg-4">
-                <button type="submit" class="btn btn-warning btn-lg">Register</button>
-              </div>
+                <button class="btn btn-warning w-100 py-2" type="submit">Sign up</button>
+                
+                <p class="mt-3">
+                    Already have an account? <a href="{{ url_for('login') }}">Login</a>
+                </p>
             </form>
           </div>
           <div class="col-md-10 col-lg-6 col-xl-7 d-flex align-items-center order-1 order-lg-2">
@@ -64,6 +69,24 @@
         </div>
       </div>
 </div>
+
+{% block scripts %}
+<script>
+function togglePassword(inputId, iconId) {
+    const passwordInput = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>
+{% endblock %}
 {% endblock %}
 
 

