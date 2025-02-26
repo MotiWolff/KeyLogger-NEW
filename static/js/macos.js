@@ -114,19 +114,21 @@ async function startLogging(btn) {
             })
         });
         
+        const data = await response.json();
+        
         if (response.ok) {
             btn.disabled = true;
             btn.nextElementSibling.disabled = false; // Enable stop button
             const statusBadge = btn.closest('.device-item').querySelector('.device-status');
             statusBadge.textContent = 'Logging';
             statusBadge.className = 'device-status badge bg-warning';
+            showAlert('Logging started successfully', 'success');
         } else {
-            const error = await response.json();
-            alert('Failed to start logging: ' + error.message);
+            showAlert(data.error || 'Failed to start logging', 'danger');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Failed to start logging');
+        showAlert('Failed to start logging: Network error', 'danger');
     }
 }
 

