@@ -1,0 +1,38 @@
+# Minimal, macOS-friendly requirements (no Xcode/build step required)
+# This file is intended for local development on macOS without full Xcode.
+
+# Web Framework
+Flask==3.0.0
+Flask-Login==0.6.3
+Flask-SQLAlchemy==3.1.1
+Werkzeug==3.0.1
+
+# Database
+SQLAlchemy==2.0.44
+
+# Keylogging
+pynput==1.7.6
+psutil==5.9.5
+
+# Security
+python-dotenv==1.0.0
+cryptography==41.0.4
+bcrypt==4.0.1
+
+# Development
+black==23.11.0
+flake8==6.1.0
+
+# Development & Testing
+pytest==7.4.3
+
+# System Info
+platform-utils==1.6.0
+python-dateutil==2.8.2
+
+# Networking
+requests==2.31.0
+urllib3==2.0.7
+
+# Time and Date
+pytz==2023.3.post1

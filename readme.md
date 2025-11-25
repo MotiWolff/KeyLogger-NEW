@@ -77,7 +77,12 @@ flask db upgrade
 
 **Development mode:**
 ```bash
-flask run --debug
+# Quick start (recommended for development)
+./run.sh
+
+# Or run via flask CLI after activating the venv:
+# source venv/bin/activate
+# flask run --debug
 ```
 
 **Production mode:**
@@ -87,6 +92,16 @@ flask run
 
 ### 7. Access the application
 Open your browser and navigate to `http://127.0.0.1:5000`
+
+## Quick Run (one command)
+
+Use the included `run.sh` helper to create a virtual environment (if needed), install the minimal dependencies and start the server:
+
+```bash
+./run.sh
+```
+
+The development server will run on `http://127.0.0.1:12345` by default (or the address printed by the server).
 
 ## 📱 Application Features
 
